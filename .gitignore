@@ -137,3 +137,17 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# build folders (if use TypeScript or Babel)
+dist/
+build/
+out/
+
+# Docker (data, if you mounted them in local folder instead of named volumes)
+.data/
+mongo_data/
+minio_data/
+
+# Specific os files
+.DS_Store
+Thumbs.db
