@@ -1,9 +1,11 @@
 
-const http = require('http');
-const { Server } = require('socket.io');
+//const http = require('http');
+//const { Server } = require('socket.io');
+const WebSocket = require('ws');
 const mongoose = require('mongoose');
 const protobuf = require('protobufjs');
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+//const Minio = require('minio');
 
 // Настройки из окружения
 const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = process.env;
@@ -25,43 +27,83 @@ const s3Client = new S3Client({
   forcePathStyle: true // Обязательно для MinIO
 });
 
-const server = http.createServer();
-const io = new Server(server);
+//  const server = http.createServer();
+//  const io = new Server(server);
 
 // 3. Загрузка Protobuf и запуск логики
-protobuf.load("image.proto", (err, root) => {
-  if (err) throw err;
-  const Picture = root.lookupType("Picture");
+// protobuf.load("image.proto", (err, root) => {
+//   if (err) throw err;
+//   const Picture = root.lookupType("Picture");
 
-  io.on('connection', (socket) => {
-    socket.on('upload_image', async (buffer) => {
-      try {
-        // Десериализация
-        const msg = Picture.decode(new Uint8Array(buffer));
-        const { fileName, data, contentType } = Picture.toObject(msg);
+//   io.on('connection', (socket) => {
+//     socket.on('upload_image', async (buffer) => {
+//       try {
+//         // Десериализация
+//         const msg = Picture.decode(new Uint8Array(buffer));
+//         const { fileName, data, contentType } = Picture.toObject(msg);
         
-        const s3Key = `${Date.now()}-${fileName}`;
+//         const s3Key = `${Date.now()}-${fileName}`;
 
-        // А) Загрузка в MinIO
-        await s3Client.send(new PutObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: s3Key,
-          Body: data,
-          ContentType: contentType
-        }));
+//         // А) Загрузка в MinIO
+//         await s3Client.send(new PutObjectCommand({
+//           Bucket: S3_BUCKET,
+//           Key: s3Key,
+//           Body: data,
+//           ContentType: contentType
+//         }));
 
-        // Б) Запись в MongoDB
-        const record = new ImageRecord({ name: fileName, s3Key, contentType });
-        await record.save();
+//         // Б) Запись в MongoDB
+//         const record = new ImageRecord({ name: fileName, s3Key, contentType });
+//         await record.save();
 
-        socket.emit('status', { success: true, s3Key });
-        console.log(`Uploaded to MinIO & Saved to DB: ${fileName}`);
-      } catch (e) {
-        console.error(e);
-        socket.emit('status', { success: false, error: e.message });
-      }
+//         socket.emit('status', { success: true, s3Key });
+//         console.log(`Uploaded to MinIO & Saved to DB: ${fileName}`);
+//       } catch (e) {
+//         console.error(e);
+//         socket.emit('status', { success: false, error: e.message });
+//       }
+//     });
+//   });
+// });
+
+// server.listen(3000, () => console.log('Server running on :3000'));
+
+
+// 3. Загрузка Protobuf и запуск WebSocket сервера
+protobuf.load("image.proto", (err, root) => {
+    if (err) throw err;
+    const ImageMessage = root.lookupType("Picture");
+
+    const wss = new WebSocket.Server({ port: 8080 }, () => {
+      console.log('--- WebSocket Server is running on port 8080 ---');
     });
-  });
-});
 
-server.listen(3000, () => console.log('Server running on :3000'));
+    wss.on('connection', (ws) => {
+        console.log('Qt Client connected');
+
+        ws.on('message', async (message) => {
+            try {
+                // Декодирование Protobuf сообщения
+                const decoded = ImageMessage.decode(message);
+                const { filename, user_id, image_data } = decoded;
+
+                // Сохранение в Minio
+                const objectName = `${Date.now()}_${filename}`;
+                await minioClient.putObject('images', objectName, image_data);
+
+                // Сохранение метаданных в MongoDB
+                const meta = new ImageMetadata({
+                    filename,
+                    userId: user_id,
+                    minioObjectName: objectName
+                });
+                await meta.save();
+
+                console.log(`Saved image ${filename} for user ${user_id}`);
+                ws.send("Upload successful");
+            } catch (e) {
+                console.error("Error processing message:", e);
+            }
+        });
+    });
+});
