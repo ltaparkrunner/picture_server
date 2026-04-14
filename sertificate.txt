@@ -1,0 +1,1 @@
+Import-Certificate -FilePath "C:\wrk\nodejs\picture_server\cert.pem" -CertStoreLocation Cert:\LocalMachine\Root

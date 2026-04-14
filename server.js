@@ -1,6 +1,7 @@
 
-//const http = require('http');
-//const { Server } = require('socket.io');
+// const https = require('https');
+const https = require('https');
+const fs = require('fs');
 const WebSocket = require('ws');
 const mongoose = require('mongoose');
 const protobuf = require('protobufjs');
@@ -9,6 +10,11 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
 // Настройки из окружения
 const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = process.env;
+
+const serverConfig = {
+    key: fs.readFileSync('key.pem'),
+    cert: fs.readFileSync('cert.pem')
+};
 
 // 1. Подключение к MongoDB
 mongoose.connect(MONGO_URL);
@@ -27,59 +33,42 @@ const s3Client = new S3Client({
   forcePathStyle: true // Обязательно для MinIO
 });
 
-//  const server = http.createServer();
-//  const io = new Server(server);
+const server = https.createServer({
+  cert: fs.readFileSync('cert.pem'),
+  key: fs.readFileSync('key.pem') // У вас должен быть еще и файл ключа!
+});
 
-// 3. Загрузка Protobuf и запуск логики
-// protobuf.load("image.proto", (err, root) => {
-//   if (err) throw err;
-//   const Picture = root.lookupType("Picture");
+const wss = new WebSocket.Server({ server });
 
-//   io.on('connection', (socket) => {
-//     socket.on('upload_image', async (buffer) => {
-//       try {
-//         // Десериализация
-//         const msg = Picture.decode(new Uint8Array(buffer));
-//         const { fileName, data, contentType } = Picture.toObject(msg);
-        
-//         const s3Key = `${Date.now()}-${fileName}`;
-
-//         // А) Загрузка в MinIO
-//         await s3Client.send(new PutObjectCommand({
-//           Bucket: S3_BUCKET,
-//           Key: s3Key,
-//           Body: data,
-//           ContentType: contentType
-//         }));
-
-//         // Б) Запись в MongoDB
-//         const record = new ImageRecord({ name: fileName, s3Key, contentType });
-//         await record.save();
-
-//         socket.emit('status', { success: true, s3Key });
-//         console.log(`Uploaded to MinIO & Saved to DB: ${fileName}`);
-//       } catch (e) {
-//         console.error(e);
-//         socket.emit('status', { success: false, error: e.message });
-//       }
-//     });
-//   });
-// });
-
-// server.listen(3000, () => console.log('Server running on :3000'));
-
-
+server.listen(8080, '0.0.0.0', () => {
+    console.log('WSS Server is running on port 8080');
+});
 // 3. Загрузка Protobuf и запуск WebSocket сервера
+/*
 protobuf.load("image.proto", (err, root) => {
+    console.log("protobuf.load(image.proto, (err, root)) the begin");
     if (err) throw err;
     const ImageMessage = root.lookupType("Picture");
-
-    const wss = new WebSocket.Server({ port: 8080 }, () => {
-      console.log('--- WebSocket Server is running on port 8080 ---');
+    console.log("protobuf.load(image.proto, (err, root)) the first step");
+    // Создаем HTTPS сервер
+    //const httpsServer = https.createServer(serverConfig);
+    const httpsServer = https.createServer({
+        key: fs.readFileSync('./key.pem'),
+        cert: fs.readFileSync('./cert.pem'),
+        minVersion: 'TLSv1.2'//, // Принудительно разрешаем TLS 1.2
+    //    ciphers: 'DEFAULT@SECLEVEL=1' 
     });
+    console.log("protobuf.load after creating https server");
+    // Привязываем WebSocket к HTTPS серверу
+    const wss = new WebSocket.Server({ server: httpsServer });
+    console.log("protobuf.load after creating new WebSocket.Server");
+
+    // const wss = new WebSocket.Server({ port: 8080 }, () => {
+    //   console.log('--- WebSocket Server is running on port 8080 ---');
+    // });
 
     wss.on('connection', (ws) => {
-        console.log('Qt Client connected');
+        console.log('Secure Qt Client connected via WSS');
 
         ws.on('message', async (message) => {
             try {
@@ -106,4 +95,12 @@ protobuf.load("image.proto", (err, root) => {
             }
         });
     });
+
+
+    // Слушаем порт 8080 (или 443 для стандартного HTTPS)
+    // httpsServer.listen(8080, '0.0.0.0', () => {
+    //     console.log('Secure WSS Server running on port 8080');
+    // });
+
 });
+*/

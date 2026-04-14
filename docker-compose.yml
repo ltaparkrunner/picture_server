@@ -13,6 +13,9 @@ services:
     depends_on:
       - mongo
       - minio
+#    volumes:
+#      - /app
+#    restart: always
 
   mongo:
     image: mongo:latest
