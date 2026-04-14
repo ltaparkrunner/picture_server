@@ -33,18 +33,18 @@ const s3Client = new S3Client({
   forcePathStyle: true // Обязательно для MinIO
 });
 
-const server = https.createServer({
-  cert: fs.readFileSync('cert.pem'),
-  key: fs.readFileSync('key.pem') // У вас должен быть еще и файл ключа!
-});
+// const server = https.createServer({
+//   cert: fs.readFileSync('cert.pem'),
+//   key: fs.readFileSync('key.pem') // У вас должен быть еще и файл ключа!
+// });
 
-const wss = new WebSocket.Server({ server });
+// const wss = new WebSocket.Server({ server });
 
-server.listen(8080, '0.0.0.0', () => {
-    console.log('WSS Server is running on port 8080');
-});
+// server.listen(8080, '0.0.0.0', () => {
+//     console.log('WSS Server is running on port 8080');
+// });
 // 3. Загрузка Protobuf и запуск WebSocket сервера
-/*
+
 protobuf.load("image.proto", (err, root) => {
     console.log("protobuf.load(image.proto, (err, root)) the begin");
     if (err) throw err;
@@ -98,9 +98,9 @@ protobuf.load("image.proto", (err, root) => {
 
 
     // Слушаем порт 8080 (или 443 для стандартного HTTPS)
-    // httpsServer.listen(8080, '0.0.0.0', () => {
-    //     console.log('Secure WSS Server running on port 8080');
-    // });
+    httpsServer.listen(8080, '0.0.0.0', () => {
+        console.log('Secure WSS Server running on port 8080');
+    });
 
 });
-*/
+
