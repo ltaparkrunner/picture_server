@@ -1,7 +1,9 @@
 syntax = "proto3";
 
 message Picture {
-  string fileName = 1;
-  bytes data = 2;
-  string contentType = 3;
+  string email_login = 1;
+  string filename = 2;
+  bytes data = 3;
+  string content_type = 4;
+  int64 timestamp = 5;
 }

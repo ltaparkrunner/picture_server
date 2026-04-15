@@ -5,7 +5,7 @@ const fs = require('fs');
 const WebSocket = require('ws');
 const mongoose = require('mongoose');
 const protobuf = require('protobufjs');
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
 //const Minio = require('minio');
 
 // Настройки из окружения
@@ -32,6 +32,30 @@ const s3Client = new S3Client({
   credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
   forcePathStyle: true // Обязательно для MinIO
 });
+
+
+const headCommand = new HeadBucketCommand({ 
+    Bucket: "images" 
+});
+
+// Создание
+const createCommand = new CreateBucketCommand({ 
+    Bucket: "images" 
+});
+async function bootstrap() {
+    try {
+        await s3Client.send(createCommand);
+        console.log("Бакет 'images' создан.");
+    } catch (err) {
+        if (err.Code === 'BucketAlreadyOwnedByYou' || err.Code === 'BucketAlreadyExists') {
+            console.log("Бакет 'images' уже существует, пропускаем создание.");
+        } else {
+            console.error("Ошибка инициализации хранилища:", err);
+        }
+    }
+}
+
+bootstrap(); // Выполняется один раз
 
 // const server = https.createServer({
 //   cert: fs.readFileSync('cert.pem'),
@@ -74,21 +98,29 @@ protobuf.load("image.proto", (err, root) => {
             try {
                 // Декодирование Protobuf сообщения
                 const decoded = ImageMessage.decode(message);
-                const { filename, user_id, image_data } = decoded;
+                const objName = decoded.filename;
+                const img_data = Buffer.from(decoded.data)
+                const { email_login, filename, data, content_type, timestamp /*user_id, image_data*/ } = decoded;
 
+                const command = new PutObjectCommand({
+                    Bucket: 'images',
+                    Key: objName,
+                    Body: img_data
+                });
                 // Сохранение в Minio
                 const objectName = `${Date.now()}_${filename}`;
-                await minioClient.putObject('images', objectName, image_data);
+//                await minioClient.putObject('images', objectName, data/*image_data*/);
+                await s3Client.send(command);
 
                 // Сохранение метаданных в MongoDB
-                const meta = new ImageMetadata({
+                const meta = new ImageRecord({
                     filename,
-                    userId: user_id,
+                    email_login: email_login,//user_id,
                     minioObjectName: objectName
                 });
                 await meta.save();
 
-                console.log(`Saved image ${filename} for user ${user_id}`);
+                console.log(`Saved image ${filename} for user ${email_login}`);
                 ws.send("Upload successful");
             } catch (e) {
                 console.error("Error processing message:", e);
