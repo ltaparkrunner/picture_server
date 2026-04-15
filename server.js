@@ -58,7 +58,7 @@ async function bootstrap() {
 }
 
 bootstrap(); // Выполняется один раз
-
+// const BaseMessage = root.lookupType("BaseMessage");
 // const server = https.createServer({
 //   cert: fs.readFileSync('cert.pem'),
 //   key: fs.readFileSync('key.pem') // У вас должен быть еще и файл ключа!
@@ -72,10 +72,7 @@ bootstrap(); // Выполняется один раз
 // 3. Загрузка Protobuf и запуск WebSocket сервера
 
 protobuf.load("image.proto", (err, root) => {
-    console.log("protobuf.load(image.proto, (err, root)) the begin");
     if (err) throw err;
-    const ImageMessage = root.lookupType("Picture");
-    console.log("protobuf.load(image.proto, (err, root)) the first step");
     // Создаем HTTPS сервер
     //const httpsServer = https.createServer(serverConfig);
     const httpsServer = https.createServer({
@@ -84,7 +81,6 @@ protobuf.load("image.proto", (err, root) => {
         minVersion: 'TLSv1.2'//, // Принудительно разрешаем TLS 1.2
     //    ciphers: 'DEFAULT@SECLEVEL=1' 
     });
-    console.log("protobuf.load after creating https server");
     // Привязываем WebSocket к HTTPS серверу
     const wss = new WebSocket.Server({ server: httpsServer });
     console.log("protobuf.load after creating new WebSocket.Server");
@@ -99,34 +95,46 @@ protobuf.load("image.proto", (err, root) => {
         ws.on('message', async (message) => {
             try {
                 // Декодирование Protobuf сообщения
-                const root = await protobuf.load("image.proto");
-                //const MainMessage = rootl
-                const decoded = ImageMessage.decode(message);
-                console.log("message: ", message.type, "   ", message.contentType, "  ", message.content_type);
-                const objName = decoded.filename;
-                const img_data = Buffer.from(decoded.data)
-                const { email_login, filename, data, content_type, timestamp /*user_id, image_data*/ } = decoded;
+                const BaseMessage = root.lookupType("BaseMessage");
+                const msg = BaseMessage.decode(message);
 
-                const command = new PutObjectCommand({
-                    Bucket: 'images',
-                    Key: objName,
-                    Body: img_data
-                });
-                // Сохранение в Minio
-                const objectName = `${Date.now()}_${filename}`;
-//                await minioClient.putObject('images', objectName, data/*image_data*/);
-                await s3Client.send(command);
+                if(msg.content === "pict"){
+                    console.log("message: after if(msg.content === pict){", msg.content);
+                    const ImageMessage = root.lookupType("Picture");
+                    console.log("after const ImageMessage = root.lookupType(PictureServer);", msg.pict.filename);
+                    //  const decoded = ImageMessage.decode(msg.pict);
+                    //  const decoded = msg.pict;
+                    const objName = msg.pict.filename;
+                    const img_data = msg.pict.data;
+                    const filename = msg.pict.filename;
+                    const emaillogin = msg.pict.emailLogin;
 
-                // Сохранение метаданных в MongoDB
-                const meta = new ImageRecord({
-                    filename,
-                    email_login: email_login,//user_id,
-                    minioObjectName: objectName
-                });
-                await meta.save();
+                    console.log(" emaillogin = ", emaillogin, " filename= ", filename, "  contenttype= ", msg.pict.contenttype,
+                        "   image= ", msg.pict.data
+                    );
+                    //const { emaillogin, filename, data, content_type, timestamp /*user_id, image_data*/ } = decoded;
 
-                console.log(`Saved image ${filename} for user ${email_login}`);
-                ws.send("Upload successful");
+                    const command = new PutObjectCommand({
+                        Bucket: 'images',
+                        Key: objName,
+                        Body: img_data
+                    });
+                    // Сохранение в Minio
+                    const objectName = `${Date.now()}_${filename}`;
+    //                await minioClient.putObject('images', objectName, data/*image_data*/);
+                    await s3Client.send(command);
+
+                    // Сохранение метаданных в MongoDB
+                    const meta = new ImageRecord({
+                        filename,
+                        emaillogin: emaillogin,//user_id,
+                        minioObjectName: objectName
+                    });
+                    await meta.save();
+
+                    console.log(`Saved image ${filename} for user ${emaillogin}`);
+                    ws.send("Upload successful");
+                }
             } catch (e) {
                 console.error("Error processing message:", e);
             }

@@ -1,33 +1,32 @@
 syntax = "proto3";
 
-enum MessageType {
-    PICTURE = 0;
-    LIST_REQUEST = 1;
-    IMAGE_INFO = 2;
-    LISTRESPONSE = 3;
-}
-
 message Picture {
-  MessageType type = 1;
-  string email_login = 2;
-  string filename = 3;
-  bytes data = 4;
-  string content_type = 5;
-  int64 timestamp = 6;
+  string emailLogin = 1;
+  string contenttype = 2;
+  bytes data = 3;
+  string filename = 4;
+  int64 timestamp = 5;
 }
 
 message ImageListRequest {
-  MessageType type = 1;
   int32 count = 2; // Запрашиваем 6
 }
 
 message ImageInfo {
-  MessageType type = 1;
   string filename = 2;
   string url = 3;
 }
 
 message ImageListResponse {
-  MessageType type = 1;
   repeated ImageInfo images = 2;
+}
+
+message BaseMessage {
+    // Внутри 'content' может быть ЛИБО upload, ЛИБО list_request
+    oneof content {
+        Picture pict = 1;
+        ImageListRequest list_request = 2;
+        ImageInfo info = 3;
+        ImageListResponse list_response = 4;
+    }
 }
