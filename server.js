@@ -6,7 +6,9 @@ const WebSocket = require('ws');
 const mongoose = require('mongoose');
 const protobuf = require('protobufjs');
 const { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
-//const Minio = require('minio');
+
+const { ListObjectsV2Command, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 // Настройки из окружения
 const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = process.env;
@@ -97,7 +99,10 @@ protobuf.load("image.proto", (err, root) => {
         ws.on('message', async (message) => {
             try {
                 // Декодирование Protobuf сообщения
+                const root = await protobuf.load("image.proto");
+                //const MainMessage = rootl
                 const decoded = ImageMessage.decode(message);
+                console.log("message: ", message.type, "   ", message.contentType, "  ", message.content_type);
                 const objName = decoded.filename;
                 const img_data = Buffer.from(decoded.data)
                 const { email_login, filename, data, content_type, timestamp /*user_id, image_data*/ } = decoded;
