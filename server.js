@@ -36,15 +36,6 @@ const s3Client = new S3Client({
   forcePathStyle: true // Обязательно для MinIO
 });
 
-const s3Clientexternal = new S3Client({
-//  endpoint: 'localhost',
-    endpoint: "http://127.0.0.1:9000",
-  region: "us-east-1", // Для MinIO любое значение
-  credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
-  forcePathStyle: true, // Обязательно для MinIO
-  useSSL: false
-});
-
 async function getDownloadUrl(bucketName, fileName) {
     try {
         // Генерируем ссылку, которая будет жить, например, 1 час (3600 сек)
@@ -149,12 +140,19 @@ protobuf.load("image.proto", (err, root) => {
                         MaxKeys: msg.listRequest.count // В 0нашем случае 6
                     });
 
+//                    getDownloadUrl()
                     const { Contents } = await s3Client.send(command);
                     
+                    // async function generateUrl() {
+                    //     const url = await s3Clientexternal.presignedGetObject(bucketName, 'file.txt', 3600);
+                    //     console.log(url);
+                    // }
                     const imageInfos = await Promise.all((Contents || []).map(async (file) => {
                         const getCommand = new GetObjectCommand({ Bucket: bucketName, Key: file.Key });
                         const url = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
                         //const publicUrl = url.replace("http://minio:9000", "http://localhost:9000");
+                        //const publicUrl = `http://localhost:9000/images/${file.Key}`;
+                        //console.log("URL= ", publicUrl);
                         return { filename: file.Key, url: url };
                     }));
                     console.log("imageInfos = ", imageInfos);
