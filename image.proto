@@ -10,6 +10,7 @@ message Picture {
 
 message ImageListRequest {
   int32 count = 1; // Запрашиваем 6
+  string bucketName = 2;
 }
 
 message ImageInfo {
@@ -21,6 +22,14 @@ message ImageListResponse {
   repeated ImageInfo images = 1;
 }
 
+message BucketRequest {
+  string userId = 1; // Запрашиваем бакеты конкретного пользователя
+}
+
+message BucketList {
+  repeated string bucketNames = 1;
+}
+
 message BaseMessage {
     // Внутри 'content' может быть ЛИБО upload, ЛИБО list_request
     oneof content {
@@ -28,5 +37,7 @@ message BaseMessage {
         ImageListRequest listRequest = 2;
         ImageInfo info = 3;
         ImageListResponse listResponse = 4;
+        BucketRequest user = 5;
+        BucketList buckets = 6;
     }
 }

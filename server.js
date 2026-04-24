@@ -5,7 +5,7 @@ const fs = require('fs');
 const WebSocket = require('ws');
 const mongoose = require('mongoose');
 const protobuf = require('protobufjs');
-const { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, ListBucketsCommand } = require("@aws-sdk/client-s3");
 
 const { ListObjectsV2Command, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
@@ -30,7 +30,6 @@ const ImageRecord = mongoose.model('ImageRecord', {
 // 2. Настройка S3 (MinIO) клиента
 const s3Client = new S3Client({
   endpoint: S3_ENDPOINT,
-//    endpoint: "http://127.0.0.1:9000",
   region: "us-east-1", // Для MinIO любое значение
   credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
   forcePathStyle: true // Обязательно для MinIO
@@ -54,7 +53,7 @@ const headCommand = new HeadBucketCommand({
 
 // Создание
 const createCommand = new CreateBucketCommand({ 
-    Bucket: "images" 
+    Bucket: "pictures" 
 });
 async function bootstrap() {
     try {
@@ -69,19 +68,16 @@ async function bootstrap() {
     }
 }
 
-// bootstrap(); // Выполняется один раз
-
+bootstrap(); // performed once
 protobuf.load("image.proto", (err, root) => {
     if (err) throw err;
-    // Создаем HTTPS сервер
-    //const httpsServer = https.createServer(serverConfig);
+    // Create HTTPS server
     const httpsServer = https.createServer({
         key: fs.readFileSync('./key.pem'),
         cert: fs.readFileSync('./cert.pem'),
-        minVersion: 'TLSv1.2'//, // Принудительно разрешаем TLS 1.2
-    //    ciphers: 'DEFAULT@SECLEVEL=1' 
+        minVersion: 'TLSv1.2'// Allow TLS 1.2
     });
-    // Привязываем WebSocket к HTTPS серверу
+    // Bind WebSocket to HTTPS server
     const wss = new WebSocket.Server({ server: httpsServer });
     console.log("protobuf.load after creating new WebSocket.Server");
 
@@ -90,16 +86,11 @@ protobuf.load("image.proto", (err, root) => {
 
         ws.on('message', async (message) => {
             try {
-                // Декодирование Protobuf сообщения
+                // Decoding Protobuf message
                 const BaseMessage = root.lookupType("BaseMessage");
                 const msg = BaseMessage.decode(message);
 
                 if(msg.content === "pict"){
-                    //  console.log("message: after if(msg.content === pict){", msg.content);
-                    //  const ImageMessage = root.lookupType("Picture");
-                    //  console.log("after const ImageMessage = root.lookupType(PictureServer);", msg.pict.filename);
-                    //  const decoded = ImageMessage.decode(msg.pict);
-                    //  const decoded = msg.pict;
                     const objName = msg.pict.filename;
                     const img_data = Buffer.from(msg.pict.data);
                     console.log("Buffer size:", img_data.length);
@@ -109,8 +100,6 @@ protobuf.load("image.proto", (err, root) => {
                     console.log(" emaillogin = ", emaillogin, " filename= ", filename, "  contentType= ", msg.pict.contenttype,
                         "   images= ", msg.pict.data
                     );
-                    //const { emaillogin, filename, data, contentType, timestamp /*user_id, image_data*/ } = decoded;
-
                     const command = new PutObjectCommand({
                         Bucket: 'images',
                         Key: objName,
@@ -118,7 +107,6 @@ protobuf.load("image.proto", (err, root) => {
                     });
                     // Сохранение в Minio
                     const objectName = `${Date.now()}_${filename}`;
-    //                await minioClient.putObject('images', objectName, data/*image_data*/);
                     await s3Client.send(command);
 
                     // Сохранение метаданных в MongoDB
@@ -140,19 +128,10 @@ protobuf.load("image.proto", (err, root) => {
                         MaxKeys: msg.listRequest.count // В 0нашем случае 6
                     });
 
-//                    getDownloadUrl()
                     const { Contents } = await s3Client.send(command);
-                    
-                    // async function generateUrl() {
-                    //     const url = await s3Clientexternal.presignedGetObject(bucketName, 'file.txt', 3600);
-                    //     console.log(url);
-                    // }
                     const imageInfos = await Promise.all((Contents || []).map(async (file) => {
                         const getCommand = new GetObjectCommand({ Bucket: bucketName, Key: file.Key });
                         const url = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
-                        //const publicUrl = url.replace("http://minio:9000", "http://localhost:9000");
-                        //const publicUrl = `http://localhost:9000/images/${file.Key}`;
-                        //console.log("URL= ", publicUrl);
                         return { filename: file.Key, url: url };
                     }));
                     console.log("imageInfos = ", imageInfos);
@@ -161,6 +140,28 @@ protobuf.load("image.proto", (err, root) => {
                         listResponse: { images: imageInfos }
                     });
                     console.log("responsePayload = ", responsePayload);
+                    ws.send(BaseMessage.encode(responsePayload).finish());
+                }
+                if(msg.content === "user"){
+                    const listBuckets = new ListBucketsCommand({})
+                    const response = await s3Client.send(listBuckets);
+                    console.log(response.Buckets)
+                    const bucketNames = response.Buckets.map(bucket => bucket.Name);
+                    //const names2 = await s3Client.bucketNames()
+                    console.log(" names: ", bucketNames, "  names2: ")//, names2)
+                    // B) Code in Protobuf
+                    // const payload = { buckets: names };
+                    // console.log("Buckets: ", payload)
+                    // const errMsg = BucketList.verify(payload);
+                    // if (errMsg) throw Error(errMsg);
+                    const responsePayload = BaseMessage.create({
+                        buckets: { bucketNames: bucketNames }
+                    });
+
+                    //const buffer = BucketList.encode(BucketList.create(payload)).finish();
+
+                    // C) Send binary data
+                    //ws.send(buffer);
                     ws.send(BaseMessage.encode(responsePayload).finish());
                 }
             } catch (e) {
