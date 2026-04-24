@@ -47,9 +47,9 @@ async function getDownloadUrl(bucketName, fileName) {
     }
 }
 
-const headCommand = new HeadBucketCommand({ 
-    Bucket: "images" 
-});
+// const headCommand = new HeadBucketCommand({ 
+//     Bucket: "images" 
+// });
 
 // Создание
 const createCommand = new CreateBucketCommand({ 
@@ -96,12 +96,14 @@ protobuf.load("image.proto", (err, root) => {
                     console.log("Buffer size:", img_data.length);
                     const filename = msg.pict.filename;
                     const emaillogin = msg.pict.emailLogin;
+                    const bucket = msg.pict.bucketName
 
                     console.log(" emaillogin = ", emaillogin, " filename= ", filename, "  contentType= ", msg.pict.contenttype,
                         "   images= ", msg.pict.data
                     );
                     const command = new PutObjectCommand({
-                        Bucket: 'images',
+                //        Bucket: 'images',
+                        Bucket: bucket,
                         Key: objName,
                         Body: img_data
                     });
@@ -121,11 +123,12 @@ protobuf.load("image.proto", (err, root) => {
                     ws.send("Upload successful");
                 }
                 if(msg.content === 'listRequest') {
-                    const bucketName = 'images';
-                    console.log("msg.listRequest.count = ", msg.listRequest.count);
+                    const bucketName = msg.listRequest.bucketName;
+                    //const bucketName = 'images';
+                    console.log("msg.listRequest.count = ", msg.listRequest.count, "msg.listRequest.bucketName = ", msg.listRequest.bucketName);
                     const command = new ListObjectsV2Command({
                         Bucket: bucketName,
-                        MaxKeys: msg.listRequest.count // В 0нашем случае 6
+                        MaxKeys: msg.listRequest.count // В нашем случае 6
                     });
 
                     const { Contents } = await s3Client.send(command);
@@ -135,7 +138,7 @@ protobuf.load("image.proto", (err, root) => {
                         return { filename: file.Key, url: url };
                     }));
                     console.log("imageInfos = ", imageInfos);
-                    // Формируем ответ
+
                     const responsePayload = BaseMessage.create({
                         listResponse: { images: imageInfos }
                     });
@@ -146,22 +149,19 @@ protobuf.load("image.proto", (err, root) => {
                     const listBuckets = new ListBucketsCommand({})
                     const response = await s3Client.send(listBuckets);
                     console.log(response.Buckets)
-                    const bucketNames = response.Buckets.map(bucket => bucket.Name);
-                    //const names2 = await s3Client.bucketNames()
-                    console.log(" names: ", bucketNames, "  names2: ")//, names2)
-                    // B) Code in Protobuf
-                    // const payload = { buckets: names };
-                    // console.log("Buckets: ", payload)
-                    // const errMsg = BucketList.verify(payload);
-                    // if (errMsg) throw Error(errMsg);
-                    const responsePayload = BaseMessage.create({
-                        buckets: { bucketNames: bucketNames }
+                    const config = await s3Client.config.endpoint();
+                    // console.log("config.protocol", config.protocol); // "http:"
+                    // console.log("config.hostname", config.hostname); // "localhost"
+                    // console.log("config.port", config.port);     // 9000
+                    const bucketInfo = response.Buckets.map(bucket => {
+                        return {bucketName: bucket.Name, 
+                            url: `${config.protocol}//${config.hostname}:${config.port}/${bucket.Name}`};
                     });
-
-                    //const buffer = BucketList.encode(BucketList.create(payload)).finish();
-
-                    // C) Send binary data
-                    //ws.send(buffer);
+                    console.log(" bucketInfo: ", bucketInfo)//, names2)
+                    //  const bucketUrl = `${s3Client.protocol}//${s3Client.host}:${s3Client.port}/${bucketName}`;
+                    const responsePayload = BaseMessage.create({
+                        buckets: { bucketInf: bucketInfo }
+                    });
                     ws.send(BaseMessage.encode(responsePayload).finish());
                 }
             } catch (e) {

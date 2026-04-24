@@ -26,8 +26,13 @@ message BucketRequest {
   string userId = 1; // Запрашиваем бакеты конкретного пользователя
 }
 
+message BucketInfo {
+  string bucketName = 1;
+  string url = 2;
+}
+
 message BucketList {
-  repeated string bucketNames = 1;
+  repeated BucketInfo bucketInf = 1;
 }
 
 message BaseMessage {
