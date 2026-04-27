@@ -1,9 +1,12 @@
 {
+  "name": "picture-server",
+  "version": "1.0.0",  
+   "type": "module",
     "dependencies": {
-    "ws": "^8.13.0",
-    "protobufjs": "^7.2.5",
-    "mongoose": "^7.5.0",
-    "@aws-sdk/client-s3": "^3.400.0",
-    "@aws-sdk/s3-request-presigner": "^3.400.0"
+      "ws": "^8.13.0",
+      "protobufjs": "^7.2.5",
+      "mongoose": "^7.5.0",
+      "@aws-sdk/client-s3": "^3.400.0",
+      "@aws-sdk/s3-request-presigner": "^3.400.0"
   }
 }

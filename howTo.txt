@@ -2,3 +2,5 @@ Import-Certificate -FilePath "C:\wrk\nodejs\picture_server\cert.pem" -CertStoreL
 Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Thumbprint -eq "DB0380C6BD8B7102EBF8C947613219BD44A51110" } | Select-Object Subject, FriendlyName, DnsNameList | Format-List
 
 docker run -it --rm node npx wscat -c wss://host.docker.internal:8080
+
+MongoDB store metadata.

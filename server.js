@@ -1,14 +1,15 @@
+import { handleDeleteImage } from './handlers.js';
 
 // const https = require('https');
-const https = require('https');
-const fs = require('fs');
-const WebSocket = require('ws');
-const mongoose = require('mongoose');
-const protobuf = require('protobufjs');
-const { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, ListBucketsCommand, DeleteObjectCommand} = require("@aws-sdk/client-s3");
+import https from 'https';
+import fs from 'fs';
+import { WebSocketServer } from 'ws';
+import mongoose from 'mongoose';
+import protobuf from 'protobufjs';
+import { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, ListBucketsCommand, DeleteObjectCommand} from "@aws-sdk/client-s3";
 
-const { ListObjectsV2Command, GetObjectCommand } = require("@aws-sdk/client-s3");
-const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+import { ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // Настройки из окружения
 const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = process.env;
@@ -47,11 +48,6 @@ async function getDownloadUrl(bucketName, fileName) {
     }
 }
 
-// const headCommand = new HeadBucketCommand({ 
-//     Bucket: "images" 
-// });
-
-// Создание
 const createCommand = new CreateBucketCommand({ 
     Bucket: "pictures" 
 });
@@ -78,7 +74,7 @@ protobuf.load("image.proto", (err, root) => {
         minVersion: 'TLSv1.2'// Allow TLS 1.2
     });
     // Bind WebSocket to HTTPS server
-    const wss = new WebSocket.Server({ server: httpsServer });
+    const wss = new WebSocketServer({ server: httpsServer });
     console.log("protobuf.load after creating new WebSocket.Server");
 
     wss.on('connection', (ws) => {
@@ -102,7 +98,6 @@ protobuf.load("image.proto", (err, root) => {
                         "   images= ", msg.pict.data
                     );
                     const command = new PutObjectCommand({
-                //        Bucket: 'images',
                         Bucket: bucket,
                         Key: objName,
                         Body: img_data
@@ -163,18 +158,7 @@ protobuf.load("image.proto", (err, root) => {
                     ws.send(BaseMessage.encode(responsePayload).finish());
                 }
                 if(msg.content === "deleteImage"){
-                    const fname = msg.deleteImage.filename
-                    const bname = msg.deleteImage.bucketName
-                    const userLog = msg.deleteImage.userLogin
-                    const imgId = msg.deleteImage.imageId
-                    // console.log("deleteImage:  fname = ", fname, "bname = ", bname, 
-                    //     "userLog = ", userLog, "imgId = ", imgId)
-                    const deleteImage = new DeleteObjectCommand({
-                        Bucket: bname,
-                        Key: fname
-                    })
-                    await s3Client.send(deleteImage);
-                    console.log("Delete document off ", fname, " from ", bname)
+                    await handleDeleteImage(msg, root, s3Client);
                 }
 
             } catch (e) {
