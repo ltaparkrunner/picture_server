@@ -1,11 +1,21 @@
 syntax = "proto3";
 
+//message Picture {
+//  string emailLogin = 1;
+//  string contentType = 2;
+//  bytes data = 3;
+//  string filename = 4;
+//  int64 timestamp = 5;
+//}
+
 message Picture {
-  string emailLogin = 1;
-  string contentType = 2;
-  bytes data = 3;
-  string filename = 4;
-  int64 timestamp = 5;
+  string filename = 1;    // Имя файла в Minio
+  string imageId = 2;     // ID документа в MongoDB
+  string userLogin = 3;      // ID пользователя для проверки прав
+  string bucketName = 4;  // Имя корзины (bucket)
+  string contentType = 5;
+  bytes data = 6;
+  int64 timestamp = 7;
 }
 
 message ImageListRequest {
@@ -23,7 +33,7 @@ message ImageListResponse {
 }
 
 message BucketRequest {
-  string userId = 1; // Запрашиваем бакеты конкретного пользователя
+  string userLogin = 1; // Запрашиваем бакеты конкретного пользователя
 }
 
 message BucketInfo {
@@ -35,6 +45,13 @@ message BucketList {
   repeated BucketInfo bucketInf = 1;
 }
 
+message DeleteImageRequest {
+    string filename = 1;    // Имя файла в Minio
+    string imageId = 2;     // ID документа в MongoDB
+    string userLogin = 3;      // ID пользователя для проверки прав
+    string bucketName = 4;  // Имя корзины (bucket)
+}
+
 message BaseMessage {
     // Внутри 'content' может быть ЛИБО upload, ЛИБО list_request
     oneof content {
@@ -42,7 +59,8 @@ message BaseMessage {
         ImageListRequest listRequest = 2;
         ImageInfo info = 3;
         ImageListResponse listResponse = 4;
-        BucketRequest user = 5;
+        BucketRequest reqUserBuckets = 5;
         BucketList buckets = 6;
+        DeleteImageRequest deleteImage = 7;
     }
 }

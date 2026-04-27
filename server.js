@@ -5,7 +5,7 @@ const fs = require('fs');
 const WebSocket = require('ws');
 const mongoose = require('mongoose');
 const protobuf = require('protobufjs');
-const { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, ListBucketsCommand } = require("@aws-sdk/client-s3");
+const { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, ListBucketsCommand, DeleteObjectCommand} = require("@aws-sdk/client-s3");
 
 const { ListObjectsV2Command, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
@@ -95,10 +95,10 @@ protobuf.load("image.proto", (err, root) => {
                     const img_data = Buffer.from(msg.pict.data);
                     console.log("Buffer size:", img_data.length);
                     const filename = msg.pict.filename;
-                    const emaillogin = msg.pict.emailLogin;
+                    const userId = msg.pict.userLogin;
                     const bucket = msg.pict.bucketName
 
-                    console.log(" emaillogin = ", emaillogin, " filename= ", filename, "  contentType= ", msg.pict.contenttype,
+                    console.log(" userId = ", userId, " filename= ", filename, "  contentType= ", msg.pict.contenttype,
                         "   images= ", msg.pict.data
                     );
                     const command = new PutObjectCommand({
@@ -114,7 +114,7 @@ protobuf.load("image.proto", (err, root) => {
                     // Сохранение метаданных в MongoDB
                     const meta = new ImageRecord({
                         filename,
-                        emaillogin: emaillogin,//user_id,
+                        userLogin: userId,//user_id,
                         minioObjectName: objectName
                     });
                     await meta.save();
@@ -137,7 +137,7 @@ protobuf.load("image.proto", (err, root) => {
                         const url = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
                         return { filename: file.Key, url: url };
                     }));
-                    console.log("imageInfos = ", imageInfos);
+                    //  console.log("imageInfos = ", imageInfos);
 
                     const responsePayload = BaseMessage.create({
                         listResponse: { images: imageInfos }
@@ -145,31 +145,43 @@ protobuf.load("image.proto", (err, root) => {
                     console.log("responsePayload = ", responsePayload);
                     ws.send(BaseMessage.encode(responsePayload).finish());
                 }
-                if(msg.content === "user"){
+                if(msg.content === "reqUserBuckets"){
                     const listBuckets = new ListBucketsCommand({})
                     const response = await s3Client.send(listBuckets);
-                    console.log(response.Buckets)
+                    //  console.log(response.Buckets)
                     const config = await s3Client.config.endpoint();
-                    // console.log("config.protocol", config.protocol); // "http:"
-                    // console.log("config.hostname", config.hostname); // "localhost"
-                    // console.log("config.port", config.port);     // 9000
+
                     const bucketInfo = response.Buckets.map(bucket => {
                         return {bucketName: bucket.Name, 
                             url: `${config.protocol}//${config.hostname}:${config.port}/${bucket.Name}`};
                     });
-                    console.log(" bucketInfo: ", bucketInfo)//, names2)
+                    //  console.log(" bucketInfo: ", bucketInfo)//, names2)
                     //  const bucketUrl = `${s3Client.protocol}//${s3Client.host}:${s3Client.port}/${bucketName}`;
                     const responsePayload = BaseMessage.create({
                         buckets: { bucketInf: bucketInfo }
                     });
                     ws.send(BaseMessage.encode(responsePayload).finish());
                 }
+                if(msg.content === "deleteImage"){
+                    const fname = msg.deleteImage.filename
+                    const bname = msg.deleteImage.bucketName
+                    const userLog = msg.deleteImage.userLogin
+                    const imgId = msg.deleteImage.imageId
+                    // console.log("deleteImage:  fname = ", fname, "bname = ", bname, 
+                    //     "userLog = ", userLog, "imgId = ", imgId)
+                    const deleteImage = new DeleteObjectCommand({
+                        Bucket: bname,
+                        Key: fname
+                    })
+                    await s3Client.send(deleteImage);
+                    console.log("Delete document off ", fname, " from ", bname)
+                }
+
             } catch (e) {
                 console.error("Error processing message:", e);
             }
         });
     });
-
 
     // Слушаем порт 8080 (или 443 для стандартного HTTPS)
     httpsServer.listen(8080, '0.0.0.0', () => {
