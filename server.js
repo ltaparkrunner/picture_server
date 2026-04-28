@@ -1,10 +1,11 @@
-import { handleDeleteImage } from './handlers.js';
+import { handleDeleteImage, handleAddImage} from './handlers.js';
 
 // const https = require('https');
 import https from 'https';
 import fs from 'fs';
 import { WebSocketServer } from 'ws';
 import mongoose from 'mongoose';
+import ImageRecord from './model/ImageRecord.js';
 import protobuf from 'protobufjs';
 import { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, ListBucketsCommand, DeleteObjectCommand} from "@aws-sdk/client-s3";
 
@@ -21,12 +22,20 @@ const serverConfig = {
 
 // 1. Подключение к MongoDB
 mongoose.connect(MONGO_URL);
-const ImageRecord = mongoose.model('ImageRecord', {
-  name: String,
-  s3Key: String,
-  contentType: String,
-  createdAt: { type: Date, default: Date.now }
-});
+// const ImageRecord = mongoose.model('ImageRecord', {
+//   name: String,
+//   s3Key: String,
+//   contentType: String,
+//   createdAt: { type: Date, default: Date.now }
+// });
+
+// const meta = new ImageRecord({
+//     originalName: fileName,
+//     path: minioPath,
+//     bucket: bucket,
+//     userLogin: userId,
+//     info: info
+// });
 
 // 2. Настройка S3 (MinIO) клиента
 const s3Client = new S3Client({
@@ -87,7 +96,7 @@ protobuf.load("image.proto", (err, root) => {
                 const msg = BaseMessage.decode(message);
 
                 if(msg.content === "pict"){
-                    const objName = msg.pict.filename;
+//                    const objName = msg.pict.filename;
                     const img_data = Buffer.from(msg.pict.data);
                     console.log("Buffer size:", img_data.length);
                     const filename = msg.pict.filename;
@@ -97,13 +106,14 @@ protobuf.load("image.proto", (err, root) => {
                     console.log(" userId = ", userId, " filename= ", filename, "  contentType= ", msg.pict.contenttype,
                         "   images= ", msg.pict.data
                     );
+
+                    // Сохранение в Minio
+                    const objectName = `${Date.now()}_${filename}`;
                     const command = new PutObjectCommand({
                         Bucket: bucket,
                         Key: objName,
                         Body: img_data
                     });
-                    // Сохранение в Minio
-                    const objectName = `${Date.now()}_${filename}`;
                     await s3Client.send(command);
 
                     // Сохранение метаданных в MongoDB
@@ -160,7 +170,9 @@ protobuf.load("image.proto", (err, root) => {
                 if(msg.content === "deleteImage"){
                     await handleDeleteImage(msg, root, s3Client);
                 }
-
+                if(msg.content === "addImage"){
+                    await handleAddImage(msg, root, s3Client, BaseMessage, ws);
+                }
             } catch (e) {
                 console.error("Error processing message:", e);
             }

@@ -18,6 +18,22 @@ message Picture {
   int64 timestamp = 7;
 }
 
+message AddImageRequest{
+  string filename = 1;    // Имя файла в Minio
+  string userLogin = 2;      // ID пользователя для проверки прав
+  string bucketName = 3;  // Имя корзины (bucket)
+  string folder = 4;
+  string info = 5;
+  bytes data = 6;
+}
+
+message ServerResponse{
+  string content = 1;
+  string status = 2; 
+  string imageId = 3;
+  string filename = 4;
+}
+
 message ImageListRequest {
   int32 count = 1; // Запрашиваем 6
   string bucketName = 2;
@@ -62,5 +78,7 @@ message BaseMessage {
         BucketRequest reqUserBuckets = 5;
         BucketList buckets = 6;
         DeleteImageRequest deleteImage = 7;
+        AddImageRequest addImage = 8;
+        ServerResponse serverResp = 9;
     }
 }
