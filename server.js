@@ -1,6 +1,5 @@
-import { handleDeleteImage, handleAddImage} from './handlers.js';
+import { handleDeleteFile, handleAddFile} from './handlers.js';
 
-// const https = require('https');
 import https from 'https';
 import fs from 'fs';
 import { WebSocketServer } from 'ws';
@@ -22,20 +21,6 @@ const serverConfig = {
 
 // 1. Подключение к MongoDB
 mongoose.connect(MONGO_URL);
-// const ImageRecord = mongoose.model('ImageRecord', {
-//   name: String,
-//   s3Key: String,
-//   contentType: String,
-//   createdAt: { type: Date, default: Date.now }
-// });
-
-// const meta = new ImageRecord({
-//     originalName: fileName,
-//     path: minioPath,
-//     bucket: bucket,
-//     userLogin: userId,
-//     info: info
-// });
 
 // 2. Настройка S3 (MinIO) клиента
 const s3Client = new S3Client({
@@ -99,7 +84,7 @@ protobuf.load("image.proto", (err, root) => {
                     const objName = msg.pict.filename;
                     const img_data = Buffer.from(msg.pict.data);
                     console.log("Buffer size:", img_data.length);
-                    const filename = msg.pict.filename;
+                    const filename = msg.pict.fileName;
                     const userId = msg.pict.userLogin;
                     const bucket = msg.pict.bucketName
 
@@ -140,12 +125,12 @@ protobuf.load("image.proto", (err, root) => {
                     const imageInfos = await Promise.all((Contents || []).map(async (file) => {
                         const getCommand = new GetObjectCommand({ Bucket: bucketName, Key: file.Key });
                         const url = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
-                        return { filename: file.Key, url: url };
+                        return { fileName: file.Key, url: url };
                     }));
                     //  console.log("imageInfos = ", imageInfos);
 
                     const responsePayload = BaseMessage.create({
-                        listResponse: { images: imageInfos }
+                        listResponse: { files: imageInfos, folders: {} }
                     });
                     console.log("responsePayload = ", responsePayload);
                     ws.send(BaseMessage.encode(responsePayload).finish());
@@ -167,11 +152,11 @@ protobuf.load("image.proto", (err, root) => {
                     });
                     ws.send(BaseMessage.encode(responsePayload).finish());
                 }
-                if(msg.content === "deleteImage"){
-                    await handleDeleteImage(msg, root, s3Client);
+                if(msg.content === "deleteFile"){
+                    await handleDeleteFile(msg, root, s3Client);
                 }
-                if(msg.content === "addImage"){
-                    await handleAddImage(msg, root, s3Client, BaseMessage, ws);
+                if(msg.content === "addFile"){
+                    await handleAddFile(msg, root, s3Client, BaseMessage, ws);
                 }
             } catch (e) {
                 console.error("Error processing message:", e);

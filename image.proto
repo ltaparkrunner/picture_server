@@ -1,16 +1,9 @@
 syntax = "proto3";
 
-//message Picture {
-//  string emailLogin = 1;
-//  string contentType = 2;
-//  bytes data = 3;
-//  string filename = 4;
-//  int64 timestamp = 5;
-//}
 
 message Picture {
-  string filename = 1;    // Имя файла в Minio
-  string imageId = 2;     // ID документа в MongoDB
+  string fileName = 1;    // Имя файла в Minio
+  string folderId = 2;     // ID документа в MongoDB
   string userLogin = 3;      // ID пользователя для проверки прав
   string bucketName = 4;  // Имя корзины (bucket)
   string contentType = 5;
@@ -18,8 +11,8 @@ message Picture {
   int64 timestamp = 7;
 }
 
-message AddImageRequest{
-  string filename = 1;    // Имя файла в Minio
+message AddFileRequest{
+  string fileName = 1;    // Имя файла в Minio
   string userLogin = 2;      // ID пользователя для проверки прав
   string bucketName = 3;  // Имя корзины (bucket)
   string folder = 4;
@@ -27,28 +20,43 @@ message AddImageRequest{
   bytes data = 6;
 }
 
-message ServerResponse{
-  string content = 1;
-  string status = 2; 
-  string imageId = 3;
-  string filename = 4;
+message AddFolderRequest{
+  string folderName = 1;    // Имя папки в Minio
+  string userLogin = 2;      // ID пользователя для проверки прав
+  string bucketName = 3;  // Имя корзины (bucket)
+  string folder = 4;
+  string info = 5;
 }
 
-message ImageListRequest {
+message ServerResponse{ // to AddFileFolderRequest
+  string content = 1;
+  string status = 2; 
+  string fileId = 3;
+  string fileName = 4;
+}
+
+message FilesFoldersListRequest {
   int32 count = 1; // Запрашиваем 6
   string bucketName = 2;
 }
 
-message ImageInfo {
-  string filename = 1;
+message FileInfo {
+  string fileName = 1;
+  string url = 2;
+  int64 size = 3;
+}
+
+message FolderInfo {
+  string folderName = 1;
   string url = 2;
 }
 
-message ImageListResponse {
-  repeated ImageInfo images = 1;
+message FilesFoldersListResponse {
+  repeated FileInfo files = 1;
+  repeated FolderInfo folders = 2;
 }
 
-message BucketRequest {
+message BucketsRequest {
   string userLogin = 1; // Запрашиваем бакеты конкретного пользователя
 }
 
@@ -57,13 +65,20 @@ message BucketInfo {
   string url = 2;
 }
 
-message BucketList {
+message BucketsList {                 // respond to BucketsRequest
   repeated BucketInfo bucketInf = 1;
 }
 
-message DeleteImageRequest {
-    string filename = 1;    // Имя файла в Minio
-    string imageId = 2;     // ID документа в MongoDB
+message DeleteFileRequest {
+    string fileName = 1;    // Имя файла в Minio
+    string fileId = 2;     // ID документа в MongoDB
+    string userLogin = 3;      // ID пользователя для проверки прав
+    string bucketName = 4;  // Имя корзины (bucket)
+}
+
+message DeleteFolderRequest {
+    string folderName = 1;    // Имя файла в Minio
+    string fileId = 2;     // ID документа в MongoDB
     string userLogin = 3;      // ID пользователя для проверки прав
     string bucketName = 4;  // Имя корзины (bucket)
 }
@@ -72,13 +87,17 @@ message BaseMessage {
     // Внутри 'content' может быть ЛИБО upload, ЛИБО list_request
     oneof content {
         Picture pict = 1;
-        ImageListRequest listRequest = 2;
-        ImageInfo info = 3;
-        ImageListResponse listResponse = 4;
-        BucketRequest reqUserBuckets = 5;
-        BucketList buckets = 6;
-        DeleteImageRequest deleteImage = 7;
-        AddImageRequest addImage = 8;
-        ServerResponse serverResp = 9;
+        AddFileRequest addFile = 2;
+        AddFolderRequest addFolder = 3;
+        ServerResponse serverResp = 4;
+        FilesFoldersListRequest listRequest = 5;
+        FileInfo fileInfo = 6;
+        FolderInfo folderInfo = 7;
+        FilesFoldersListResponse listResponse = 8;
+        BucketsRequest reqUserBuckets = 9;
+        BucketInfo bucketInfo = 10;
+        BucketsList buckets = 11;
+        DeleteFileRequest deleteFile = 12;
+        DeleteFolderRequest deleteFolder = 13;
     }
 }
