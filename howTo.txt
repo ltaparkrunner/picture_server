@@ -48,3 +48,95 @@ more information about relation between mongoDB information and Minio saved file
     Главный совет: Всегда делайте minioKey (путь к файлу) уникальным. Если вы просто будете хранить photo.jpg и два пользователя загрузят файл с таким именем, второй перезапишет первый в Minio, и ваша база данных станет неактуальной.
     Хотите увидеть пример кода, который одновременно сохраняет инфо в MongoDB и загружает файл в Minio?
 
+Способ 2: Иерархия путей в MinIO (Логическая связь)
+Чтобы файлы не перемешивались внутри самого MinIO, используйте логику префиксов (папок), основанную на ID пользователя.
+Пример формирования пути в handlers.js:
+javascript
+async function uploadFile(user, file) {
+    // Формируем путь: "users/<USER_ID>/<FILENAME>"
+    const s3Key = `users/${user._id}/${file.name}`;
+
+    const newImage = new ImageRecord({
+        originalName: file.name,
+        s3Key: s3Key,
+        bucket: "my-app-storage",
+        userId: user._id // Привязываем к ID из MongoDB
+    });
+
+    await newImage.save();
+}
+Используйте код с осторожностью.
+Как это работает на практике:
+Безопасность: Когда пользователь запрашивает файл, вы сначала идете в MongoDB:
+const img = await ImageRecord.findOne({ _id: imgId, userId: currentUserId });
+Если запись не найдена, значит, пользователь пытается скачать чужой файл — вы выдаете ошибку 403.
+Удаление пользователя: Если вы удаляете аккаунт, вы легко находите все записи в базе по userId, удаляете объекты из MinIO по их s3Key, а затем удаляете записи из базы.
+Квоты: Вы можете легко посчитать, сколько места занимают файлы пользователя:
+javascript
+const stats = await ImageRecord.aggregate([
+    { $match: { userId: user._id } },
+    { $group: { _id: null, totalSize: { $sum: "$size" } } }
+]);
+Используйте код с осторожностью.
+Что выбрать?
+Если у вас один общий бакет для всех — используйте Способ 2 (префиксы users/id/... внутри бакета). Это проще всего в поддержке.
+
+
+How to get the list of files and folders by particular bucket and folders in my nodejs Minio/MongoDB server?
+Для получения списка файлов и папок в системе, где MinIO хранит физические объекты, а MongoDB — их метаданные, лучше всего делать запрос именно к MongoDB. Это намного быстрее и позволяет реализовать виртуальную иерархию.
+Вот как реализовать получение содержимого конкретной «папки» в бакете:
+1. Логика запроса в MongoDB
+Если вы используете структуру путей в поле s3Key (например, users/alex/photos/image.jpg), то чтобы получить содержимое папки users/alex/, нам нужно найти все записи, которые начинаются с этого пути, но не уходят в более глубокие подпапки.
+2. Функция в handlers.js
+Эта функция вернет список файлов и «виртуальных» подпапок для заданного пути:
+javascript
+import ImageRecord from './model/ImageRecord.js';
+
+async function getFolderContent(bucketName, folderPath = "") {
+    // Гарантируем, что путь заканчивается слэшем, если он не пустой
+    const prefix = folderPath === "" ? "" : (folderPath.endsWith('/') ? folderPath : folderPath + '/');
+    
+    // Ищем все записи в заданном бакете, начинающиеся с префикса
+    const items = await ImageRecord.find({
+        bucket: bucketName,
+        s3Key: new RegExp('^' + prefix) 
+    });
+
+    const folders = new Set();
+    const files = [];
+
+    items.forEach(item => {
+        // Отрезаем префикс текущей папки от полного пути
+        const relativePath = item.s3Key.substring(prefix.length);
+        
+        if (relativePath.includes('/')) {
+            // Если в остатке есть слэш — это файл в подпапке. 
+            // Берем только имя первой подпапки.
+            const subFolderName = relativePath.split('/')[0];
+            folders.add(subFolderName);
+        } else {
+            // Если слэшей больше нет — это файл непосредственно в текущей папке
+            files.push(item);
+        }
+    });
+
+    return {
+        currentPath: prefix,
+        subFolders: Array.from(folders),
+        files: files
+    };
+}
+Используйте код с осторожностью.
+3. Почему это лучше, чем запрашивать напрямую у MinIO?
+Скорость: MongoDB вернет результат за миллисекунды (особенно если есть индекс на s3Key). Запрос listObjects в MinIO может быть медленным при большом количестве файлов.
+Доп. данные: Вы сразу получаете originalName, size, createdAt и ваш объект info, чего нет в стандартном ответе MinIO.
+Безопасность: Вы можете легко добавить условие { userId: currentUserId } в запрос find, чтобы пользователь видел только свои файлы.
+4. Рекомендация по индексам
+Чтобы этот поиск работал мгновенно, добавьте индекс в вашу схему ImageRecord.js:
+javascript
+imageRecordSchema.index({ bucket: 1, s3Key: 1 });
+Используйте код с осторожностью.
+Как это вызвать:
+Чтобы получить корень бакета: getFolderContent("my-bucket", "")
+Чтобы получить папку пользователя: getFolderContent("my-bucket", "users/alex123/")
+

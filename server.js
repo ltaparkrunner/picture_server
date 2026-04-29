@@ -158,6 +158,9 @@ protobuf.load("image.proto", (err, root) => {
                 if(msg.content === "addFile"){
                     await handleAddFile(msg, root, s3Client, BaseMessage, ws);
                 }
+                if(msg.content === "listRequest") {
+                    await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
+                }
             } catch (e) {
                 console.error("Error processing message:", e);
             }
