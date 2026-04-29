@@ -29,7 +29,8 @@ export async function handleAddImage(msg, root, s3Client, BaseMessage, ws){
     console.log(" filename= ", fileName, " userId = ", userId, " bucket = ", bucket, 
         " folder = ", folder, " info = ", info);
 
-    const minioPath = `${folder}/${Date.now()}_${uuidv4()}_${fileName}`;
+    //const minioPath = `${folder}/${Date.now()}_${uuidv4()}_${fileName}`;
+    const minioPath = fileName;
     const command = new PutObjectCommand({
         Bucket: bucket,
         Key: minioPath,

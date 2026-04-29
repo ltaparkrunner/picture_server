@@ -96,7 +96,7 @@ protobuf.load("image.proto", (err, root) => {
                 const msg = BaseMessage.decode(message);
 
                 if(msg.content === "pict"){
-//                    const objName = msg.pict.filename;
+                    const objName = msg.pict.filename;
                     const img_data = Buffer.from(msg.pict.data);
                     console.log("Buffer size:", img_data.length);
                     const filename = msg.pict.filename;
