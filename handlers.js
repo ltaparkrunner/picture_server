@@ -45,6 +45,7 @@ export async function handleAddFile(msg, root, s3Client, BaseMessage, ws){
     const meta = new ImageRecord({
         name: fileName,
         originalName: fileName,
+        folder: folder,
         s3Key: minioPath,
         bucket: bucket,
         userLogin: usrLogin,
@@ -74,6 +75,7 @@ export async function handleViewFolder(msg, root, s3Client, BaseMessage, ws)
     const folderName = msg.listRequest.folderName;
     const usrLogin = msg.listRequest.userLogin;
 
+    const minioPath = "http://minio:9000/" + bucketName + "/";
     console.log("bucketName = ", bucketName, "  folderName = ", folderName, "  usrLogin = ", usrLogin);
 
     const { 
@@ -82,10 +84,21 @@ export async function handleViewFolder(msg, root, s3Client, BaseMessage, ws)
     files: fls 
     }  = await getFolderContent(bucketName,  folderName)
 
+    console.log("files = ", fls, "  folders = ", sFolders);
+    const fs = fls.map(item => ({
+        fileName : item.originalName,
+        url : minioPath + item.s3Key,
+        size : item.size
+    }));
+    const sFldrs = sFolders.map(name=> ({
+        folderName: name,
+        url: minioPath + folderName + name + "/"
+    }));
+    console.log("fs = ", fs, "  sFldrs = ", sFldrs);
     const responsePayload = BaseMessage.create({
-        listResponse: { files: imageInfos, folders: {} }
+        listResponse: { files: fs, folders: sFldrs }
     });
-    console.log("responsePayload = ", responsePayload);
+    //  console.log("responsePayload = ", responsePayload);
     ws.send(BaseMessage.encode(responsePayload).finish());
 }
 
@@ -116,7 +129,7 @@ async function getFolderContent(bucketName, folderPath = "") {
             files.push(item);
         }
     });
-
+    folders.add("forever")
     return {
         currentPath: prefix,
         subFolders: Array.from(folders),

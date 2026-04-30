@@ -36,8 +36,9 @@ message ServerResponse{ // to AddFileFolderRequest
 }
 
 message FilesFoldersListRequest {
-  int32 count = 1; // Запрашиваем 6
-  string bucketName = 2;
+  string bucketName = 1;
+  string folderName = 2;
+  string userLogin = 3;
 }
 
 message FileInfo {

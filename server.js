@@ -1,4 +1,4 @@
-import { handleDeleteFile, handleAddFile} from './handlers.js';
+import { handleDeleteFile, handleAddFile, handleViewFolder} from './handlers.js';
 
 import https from 'https';
 import fs from 'fs';
@@ -112,7 +112,7 @@ protobuf.load("image.proto", (err, root) => {
                     console.log(`Saved image ${filename} for user ${emaillogin}`);
                     ws.send("Upload successful");
                 }
-                if(msg.content === 'listRequest') {
+                if(msg.content === 'listRequest2') {
                     const bucketName = msg.listRequest.bucketName;
                     //const bucketName = 'images';
                     console.log("msg.listRequest.count = ", msg.listRequest.count, "msg.listRequest.bucketName = ", msg.listRequest.bucketName);

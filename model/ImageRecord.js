@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const imageRecordSchema = new mongoose.Schema({
     name: String,           // Можно оставить для краткости
     originalName: String,   // Имя файла
+    folder: String,
     s3Key: String,          // Путь в MinIO
     bucket: String,         // Бакет
     userLogin: String,      // ID или логин пользователя
