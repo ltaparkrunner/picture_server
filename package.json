@@ -3,6 +3,7 @@
   "version": "1.0.0",  
    "type": "module",
     "dependencies": {
+      "sanitize-filename": "^1.6.3",
       "bcrypt": "^5.1.1",
       "ws": "^8.13.0",
       "protobufjs": "^7.2.5",

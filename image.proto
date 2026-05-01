@@ -31,7 +31,7 @@ message AddFolderRequest{
 message ServerResponse{ // to AddFileFolderRequest
   string content = 1;
   string status = 2; 
-  string fileId = 3;
+  string uniqueName = 3;
   string fileName = 4;
 }
 
@@ -84,6 +84,10 @@ message DeleteFolderRequest {
     string bucketName = 4;  // Имя корзины (bucket)
 }
 
+message DeleteBucketRequest {
+    string bucketName = 1;
+}
+
 message BaseMessage {
     // Внутри 'content' может быть ЛИБО upload, ЛИБО list_request
     oneof content {
@@ -100,5 +104,6 @@ message BaseMessage {
         BucketsList buckets = 11;
         DeleteFileRequest deleteFile = 12;
         DeleteFolderRequest deleteFolder = 13;
+        DeleteBucketRequest deleteBucket = 14;
     }
 }

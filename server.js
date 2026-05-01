@@ -161,6 +161,11 @@ protobuf.load("image.proto", (err, root) => {
                 if(msg.content === "listRequest") {
                     await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
                 }
+                if(msg.content === "deleteBucket") {
+                    console.log("deleteBucket");
+                    const bucket = msg.deleteBucket.bucketName;
+                    await ImageRecord.deleteMany({});
+                }
             } catch (e) {
                 console.error("Error processing message:", e);
             }

@@ -1,3 +1,7 @@
+await s3Client.send(new HeadBucketCommand({ Bucket: bucketName }));
+check existance of bucket throwgh exception (try catch).
+may be try to send error message after try-catch construction?
+
 Import-Certificate -FilePath "C:\wrk\nodejs\picture_server\cert.pem" -CertStoreLocation Cert:\LocalMachine\Root
 Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Thumbprint -eq "DB0380C6BD8B7102EBF8C947613219BD44A51110" } | Select-Object Subject, FriendlyName, DnsNameList | Format-List
 
@@ -140,3 +144,65 @@ imageRecordSchema.index({ bucket: 1, s3Key: 1 });
 Чтобы получить корень бакета: getFolderContent("my-bucket", "")
 Чтобы получить папку пользователя: getFolderContent("my-bucket", "users/alex123/")
 
+
+
+1. Логика генерации уникального имени
+Алгоритм прост: проверяем наличие имени, и если оно занято, добавляем (1), (2) и так далее, пока не найдем свободное.
+javascript
+import ImageRecord from './model/ImageRecord.js';
+
+async function getUniqueFileName(bucket, folderPath, originalName) {
+    let name = originalName;
+    let extension = "";
+    let baseName = originalName;
+
+    // Разделяем имя и расширение (например, "image" и ".jpg")
+    const lastDotIndex = originalName.lastIndexOf('.');
+    if (lastDotIndex !== -1) {
+        baseName = originalName.substring(0, lastDotIndex);
+        extension = originalName.substring(lastDotIndex);
+    }
+
+    let counter = 1;
+    let isUnique = false;
+
+    while (!isUnique) {
+        // Проверяем, существует ли уже такой s3Key в этом бакете
+        const fullPath = `${folderPath}${name}`;
+        const existing = await ImageRecord.findOne({ bucket, s3Key: fullPath });
+
+        if (!existing) {
+            isUnique = true;
+        } else {
+            // Если занято, создаем новое имя: "file (1).jpg"
+            name = `${baseName} (${counter})${extension}`;
+            counter++;
+        }
+    }
+
+    return name;
+}
+Используйте код с осторожностью.
+2. Применение при загрузке
+В вашем handlers.js вызывайте эту функцию перед тем, как отправлять файл в MinIO и сохранять в базу:
+javascript
+async function handleUpload(userId, bucket, folderPath, fileName) {
+    // 1. Получаем уникальное имя
+    const uniqueName = await getUniqueFileName(bucket, folderPath, fileName);
+    const finalS3Key = `${folderPath}${uniqueName}`;
+
+    // 2. Теперь сохраняем в базу и MinIO с этим уникальным ключом
+    const newImage = new ImageRecord({
+        originalName: fileName, // Оставляем оригинал для красоты
+        name: uniqueName,       // "file (1).jpg"
+        s3Key: finalS3Key,
+        bucket: bucket,
+        userLogin: userId
+    });
+
+    await newImage.save();
+    return uniqueName;
+}
+
+separate folder in separated folder field.
+ put extension to info field

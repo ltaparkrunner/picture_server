@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
 import ImageRecord from "./model/ImageRecord.js";
 import User from './model/User.js';
+import  path from 'path';
+import  sanitize from 'sanitize-filename';
 
 export async function handleDeleteFile(msg, root, s3Client){
     const fname = msg.deleteImage.fileName
@@ -30,37 +32,40 @@ export async function handleAddFile(msg, root, s3Client, BaseMessage, ws){
 
     console.log(" fileName= ", fileName, " usrLogin = ", usrLogin, " bucket = ", bucket, 
         " folder = ", folder, " info = ", info);
+    const safefolder = sanitize(folder).replace(/\s+/g, '-');
+    const {uniqueName, ext} = prepareFilename(fileName);
+    const s3Key = (safefolder) ?  `${safefolder}/${uniqueName}` : uniqueName;
 
-    //const minioPath = `${folder}/${Date.now()}_${uuidv4()}_${fileName}`;
-    const minioPath = fileName;
+    console.log("uniqueName:", uniqueName, " s3Key= ", s3Key);
+
     const command = new PutObjectCommand({
         Bucket: bucket,
-        Key: minioPath,
+        Key: s3Key,
         Body: img_data
     });
 
     await s3Client.send(command);
-
+    console.log(" s3Client.send(command) successful ", s3Key);
     // Сохранение метаданных в MongoDB
     const meta = new ImageRecord({
-        name: fileName,
+        name: uniqueName,
         originalName: fileName,
-        folder: folder,
-        s3Key: minioPath,
+        folder: safefolder,
+        s3Key: s3Key,
         bucket: bucket,
         userLogin: usrLogin,
-        info: {type : "jpg"},
+        info: {type : ext},
         size: img_data.length    
     });
     const savedMeta = await meta.save();
 
-    console.log(`Saved image ${fileName} for user ${userId} with ID: ${savedMeta._id}`);
+    console.log(`Saved image ${uniqueName} for user ${usrLogin} with ID: ${savedMeta._id}`);
 
     const responsePayload = BaseMessage.create({
         serverResp: {         
             content: "upload_result",
             status: "success",
-            fileId: savedMeta._id.toString(), // Вот ваш автосгенерированный ID
+            uniqueName: uniqueName,//savedMeta._id.toString(), // Вот ваш автосгенерированный ID
             fileName: fileName
         }
     });
@@ -79,9 +84,9 @@ export async function handleViewFolder(msg, root, s3Client, BaseMessage, ws)
     console.log("bucketName = ", bucketName, "  folderName = ", folderName, "  usrLogin = ", usrLogin);
 
     const { 
-    currentPath: curPath, 
-    subFolders: sFolders, 
-    files: fls 
+        currentPath: curPath, 
+        subFolders: sFolders, 
+        files: fls 
     }  = await getFolderContent(bucketName,  folderName)
 
     console.log("files = ", fls, "  folders = ", sFolders);
@@ -129,7 +134,7 @@ async function getFolderContent(bucketName, folderPath = "") {
             files.push(item);
         }
     });
-    folders.add("forever")
+    // folders.add("forever")
     return {
         currentPath: prefix,
         subFolders: Array.from(folders),
@@ -153,4 +158,77 @@ async function login(login, password) {
     if (!isMatch) throw new Error("Incorrect password");
 
     return "Successful login!";
+}
+
+// import ImageRecord from './model/ImageRecord.js';
+// // Предположим, у вас экспортирован настроенный клиент minioClient
+// import { minioClient } from './minioConfig.js'; 
+
+async function deleteImageAndRecord(recordId) {
+    try {
+        // 1. Находим запись в MongoDB, чтобы узнать путь в MinIO
+        const record = await ImageRecord.findById(recordId);
+        
+        if (!record) {
+            throw new Error("Запись не найдена в базе данных");
+        }
+
+        // 2. Удаляем физический файл из MinIO
+        // Нам нужны имя бакета и s3Key (путь к файлу)
+        await minioClient.removeObject(record.bucket, record.s3Key);
+        console.log(`Файл ${record.s3Key} удален из MinIO`);
+
+        // 3. Удаляем метаданные из MongoDB
+        await ImageRecord.findByIdAndDelete(recordId);
+        console.log(`Запись ${recordId} удалена из MongoDB`);
+
+        return { success: true };
+    } catch (error) {
+        console.error("Ошибка при удалении:", error.message);
+        throw error;
+    }
+}
+
+
+async function getUniqueFileName(bucket, folderPath, originalName) {
+    let name = originalName;
+    let extension = "";
+    let baseName = originalName;
+
+    // Разделяем имя и расширение (например, "image" и ".jpg")
+    const lastDotIndex = originalName.lastIndexOf('.');
+    if (lastDotIndex !== -1) {
+        baseName = originalName.substring(0, lastDotIndex);
+        extension = originalName.substring(lastDotIndex);
+    }
+
+    let counter = 1;
+    let isUnique = false;
+
+    while (!isUnique) {
+        // Проверяем, существует ли уже такой s3Key в этом бакете
+        const fullPath = `${folderPath}${name}`;
+        const existing = await ImageRecord.findOne({ bucket, s3Key: fullPath });
+
+        if (!existing) {
+            isUnique = true;
+        } else {
+            // Если занято, создаем новое имя: "file (1).jpg"
+            name = `${baseName} (${counter})${extension}`;
+            counter++;
+        }
+    }
+
+    return {name, extension};
+}
+
+function prepareFilename(originalName) {
+    const ext = path.extname(originalName); // .jpg
+    const nameOnly = path.basename(originalName, ext); // photo
+    console.log("ext: ", ext, "  nameOnly: ", nameOnly);
+    // Очищаем имя и добавляем UUID
+    const safeName = sanitize(nameOnly).replace(/\s+/g, '-').toLowerCase();
+    const uniqueName = `${uuidv4()}-${safeName}${ext}`;
+    console.log("finalFilename: ", uniqueName, "  ext: ", ext);
+    return {uniqueName, ext};
 }
