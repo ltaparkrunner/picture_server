@@ -1,3 +1,9 @@
+export async function handleViewFolder(msg, root, s3Client, BaseMessage, ws)
+
+    const bucketName = msg.listRequest.bucketName;
+    const folderName = msg.listRequest.folderName;
+    const usrLogin = msg.listRequest.userLogin;
+
 await s3Client.send(new HeadBucketCommand({ Bucket: bucketName }));
 check existance of bucket throwgh exception (try catch).
 may be try to send error message after try-catch construction?

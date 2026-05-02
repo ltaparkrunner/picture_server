@@ -1,4 +1,4 @@
-import { handleDeleteFile, handleAddFile, handleViewFolder} from './handlers.js';
+import { handleDeleteFile, handleAddFile, handleViewFolder, handleGetFolderContent} from './handlers.js';
 
 import https from 'https';
 import fs from 'fs';
@@ -153,13 +153,14 @@ protobuf.load("image.proto", (err, root) => {
                     ws.send(BaseMessage.encode(responsePayload).finish());
                 }
                 if(msg.content === "deleteFile"){
-                    await handleDeleteFile(msg, root, s3Client);
+                    await handleDeleteFile(msg, root, s3Client, BaseMessage, ws);
                 }
                 if(msg.content === "addFile"){
                     await handleAddFile(msg, root, s3Client, BaseMessage, ws);
                 }
                 if(msg.content === "listRequest") {
-                    await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
+                    await handleGetFolderContent(msg, s3Client, BaseMessage, ws);
+                    // await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
                 }
                 if(msg.content === "deleteBucket") {
                     console.log("deleteBucket");

@@ -1,4 +1,5 @@
-import { DeleteObjectCommand, PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { GetObjectCommand, DeleteObjectCommand, PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
 import ImageRecord from "./model/ImageRecord.js";
@@ -6,19 +7,46 @@ import User from './model/User.js';
 import  path from 'path';
 import  sanitize from 'sanitize-filename';
 
-export async function handleDeleteFile(msg, root, s3Client){
-    const fname = msg.deleteImage.fileName
-    const bname = msg.deleteImage.bucketName
-    const usrLogin = msg.deleteImage.userLogin
-    const fileId = msg.deleteImage.fileId
-    // console.log("deleteImage:  fname = ", fname, "bname = ", bname, 
-    //     "usrLogin = ", usrLogin, "imgId = ", imgId)
-    const deleteImage = new DeleteObjectCommand({
-        Bucket: bname,
-        Key: fname
-    })
-    await s3Client.send(deleteImage);
-    console.log("Delete document off ", fname, " from ", bname)
+export async function handleDeleteFile(msg, root, s3Client, BaseMessage, ws){
+    console.log("   handleDeleteFile(msg, root, s3Client, BaseMessage, ws)");
+    const fname = msg.deleteFile.fileName
+    const bname = msg.deleteFile.bucketName
+    const usrLogin = msg.deleteFile.userLogin
+    const mongoId = msg.deleteFile.mongoId
+    console.log("deleteFile:  fname = ", fname, "bname = ", bname, 
+        "usrLogin = ", usrLogin, "mongoId = ", mongoId)
+
+    const record = await ImageRecord.findById(mongoId);
+    
+    if (!record) {
+        console.log("Запись не найдена в базе данных");
+        throw new Error("Запись не найдена в базе данных");
+    }
+
+    // 2. Удаляем физический файл из MinIO
+    // Нам нужны имя бакета и s3Key (путь к файлу)
+    const dltFile = new DeleteObjectCommand({
+        Bucket: record.bucket,
+        Key: record.s3Key
+    });
+    await s3Client.send(dltFile);
+//        await minioClient.removeObject(record.bucket, record.s3Key);
+    console.log(`Файл ${record.s3Key} удален из MinIO`);
+
+    // 3. Удаляем метаданные из MongoDB
+    await ImageRecord.findByIdAndDelete(mongoId);
+    console.log(`Запись ${mongoId} удалена из MongoDB`);
+    
+    const responsePayload = BaseMessage.create({
+        serverResp: {         
+            content: "delete_file_result",
+            status: "success",
+        }
+    });
+
+    console.log("responsePayload = ", responsePayload);
+    ws.send(BaseMessage.encode(responsePayload).finish());
+        console.log("Delete document off ", fname, " from ", bname);
 }
 
 export async function handleAddFile(msg, root, s3Client, BaseMessage, ws){
@@ -65,8 +93,6 @@ export async function handleAddFile(msg, root, s3Client, BaseMessage, ws){
         serverResp: {         
             content: "upload_result",
             status: "success",
-            uniqueName: uniqueName,//savedMeta._id.toString(), // Вот ваш автосгенерированный ID
-            fileName: fileName
         }
     });
 
@@ -92,6 +118,7 @@ export async function handleViewFolder(msg, root, s3Client, BaseMessage, ws)
     console.log("files = ", fls, "  folders = ", sFolders);
     const fs = fls.map(item => ({
         fileName : item.originalName,
+//        mongoId: 
         url : minioPath + item.s3Key,
         size : item.size
     }));
@@ -170,11 +197,17 @@ async function deleteImageAndRecord(recordId) {
         const record = await ImageRecord.findById(recordId);
         
         if (!record) {
+            console.log("Запись не найдена в базе данных");
             throw new Error("Запись не найдена в базе данных");
         }
 
         // 2. Удаляем физический файл из MinIO
         // Нам нужны имя бакета и s3Key (путь к файлу)
+        const deleteImage = new DeleteObjectCommand({
+            Bucket: record.bucket,
+            Key: record.s3Key
+        })
+        await s3Client.send(deleteImage);
         await minioClient.removeObject(record.bucket, record.s3Key);
         console.log(`Файл ${record.s3Key} удален из MinIO`);
 
@@ -231,4 +264,90 @@ function prepareFilename(originalName) {
     const uniqueName = `${uuidv4()}-${safeName}${ext}`;
     console.log("finalFilename: ", uniqueName, "  ext: ", ext);
     return {uniqueName, ext};
+}
+
+//export async function handleViewFolder(msg, root, s3Client, BaseMessage, ws)
+export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
+    const { bucketName, folderName, userLogin } = msg.listRequest; 
+    console.log(" bucketName", bucketName,  "folderName", folderName,  "userLogin", userLogin);
+
+    // 1. Получаем РЕАЛЬНЫЕ ФАЙЛЫ в текущей папке
+    const files = await ImageRecord.find({ 
+        bucket: bucketName, 
+        folder: folderName 
+    }).lean();
+
+    // 2. Находим ВИРТУАЛЬНЫЕ ПОДПАПКИ через агрегацию
+    // Ищем все записи, где путь начинается с currentPath
+    // const prefix = currentPath === "" ? "" : currentPath + "/";
+    const prefix = folderName === "" ? "" : (folderName.endsWith('/') ? folderName : folderName + '/');
+    
+    const folders = await ImageRecord.aggregate([
+        { $match: { bucket: bucketName, folder: new RegExp(`^${prefix}[^/]+`) } },
+        { $project: { 
+            // Отрезаем текущий префикс и берем только следующий сегмент пути
+            relativeFolder: { $substr: ["$folder", prefix.length, -1] } 
+        }},
+        { $project: {
+            // Оставляем только часть до следующего слеша
+            folderNm: { $arrayElemAt: [{ $split: ["$relativeFolder", "/"] }, 0] }
+        }},
+        { $group: { _id: "$folderNm" } } // Группируем, чтобы получить уникальные имена
+    ]);
+
+// ... (после вычисления folders и files в вашей функции)
+    const minioPath = "http://minio:9000/" + bucketName + "/";
+    // 1. Подготавливаем массив файлов для Protobuf
+    // const filesPayload = files.map(file => ({
+    //     fileName: file.originalName,
+    //     mongoId: file._id.toString(),
+    //     // URL для прямого скачивания (если нужно) или просто пустая строка
+    //     // url : minioPath + item.s3Key,
+    //     url: `/download/${file._id}`, 
+    //     size: file.size || 0
+    // }));
+    const filesPayload = await Promise.all(files.map(async (file) => {
+    // Генерируем временную ссылку напрямую на Minio
+        const command = new GetObjectCommand({
+            Bucket: file.bucket,
+            Key: file.s3Key
+        });
+
+        // Ссылка будет валидна, например, 1 час (3600 секунд)
+        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+
+        return {
+            fileName: file.originalName,
+            mongoId: file._id.toString(),
+            url: signedUrl, // Теперь здесь прямая временная ссылка для QML Image
+            size: file.size || 0
+        };
+    }));
+
+    // 2. Подготавливаем массив папок для Protobuf
+    // В вашем варианте folders — это Set или массив строк (имен подпапок)
+    const foldersPayload = Array.from(folders).map(folderNm => ({
+        folderName: folderNm,
+        // URL для папок обычно не используется, но структура требует string
+        url: minioPath + folderName + "/" + folderNm
+    }));
+
+    // 3. Собираем финальное сообщение согласно FilesFoldersListResponse
+    const responsePayload = BaseMessage.create({
+        // serverResp: {
+        //     content: "folder_content",
+        //     status: "success"
+        // },
+        // Ваша структура FilesFoldersListResponse
+        listResponse: {
+            files: filesPayload,
+            folders: foldersPayload
+        }
+    });
+
+    // 4. Кодируем и отправляем через WebSocket
+    const buffer = BaseMessage.encode(responsePayload).finish();
+    ws.send(buffer);
+
+    console.log(`Sent ${filesPayload.length} files and ${foldersPayload.length} folders to client`);
 }
