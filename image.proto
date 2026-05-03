@@ -39,6 +39,12 @@ message FilesFoldersListRequest {
   string userLogin = 3;
 }
 
+message FilesOnlyListRequest {
+  string bucketName = 1;
+  string folderName = 2;
+  string userLogin = 3;
+}
+
 message FileInfo {
   string fileName = 1;
   string mongoId = 2;
@@ -54,6 +60,10 @@ message FolderInfo {
 message FilesFoldersListResponse {
   repeated FileInfo files = 1;
   repeated FolderInfo folders = 2;
+}
+
+message FilesOnlyListResponse {
+  repeated FileInfo files = 1;
 }
 
 message BucketsRequest {
@@ -95,21 +105,22 @@ message DeleteBucketRequest {
 }
 
 message BaseMessage {
-    // Внутри 'content' может быть ЛИБО upload, ЛИБО list_request
-    oneof content {
-        Picture pict = 1;
-        AddFileRequest addFile = 2;
-        AddFolderRequest addFolder = 3;
-        ServerResponse serverResp = 4;
-        FilesFoldersListRequest listRequest = 5;
-        FileInfo fileInfo = 6;
-        FolderInfo folderInfo = 7;
-        FilesFoldersListResponse listResponse = 8;
-        BucketsRequest reqUserBuckets = 9;
-        BucketInfo bucketInfo = 10;
-        BucketsList buckets = 11;
-        DeleteFileRequest deleteFile = 12;
-        DeleteFolderRequest deleteFolder = 13;
-        DeleteBucketRequest deleteBucket = 14;
-    }
+  oneof content {
+    Picture pict = 1;
+    AddFileRequest addFile = 2;
+    AddFolderRequest addFolder = 3;
+    ServerResponse serverResp = 4;
+    FilesFoldersListRequest listRequest = 5;
+    FilesOnlyListRequest filesListRequest = 6;
+    FileInfo fileInfo = 7;
+    FolderInfo folderInfo = 8;
+    FilesFoldersListResponse listResponse = 9;
+    FilesOnlyListResponse filesListResponse = 10;
+    BucketsRequest reqUserBuckets = 11;
+    BucketInfo bucketInfo = 12;
+    BucketsList buckets = 13;
+    DeleteFileRequest deleteFile = 14;
+    DeleteFolderRequest deleteFolder = 15;
+    DeleteBucketRequest deleteBucket = 16;
+  }
 }

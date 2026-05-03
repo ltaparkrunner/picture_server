@@ -351,3 +351,45 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
 
     console.log(`Sent ${filesPayload.length} files and ${foldersPayload.length} folders to client`);
 }
+
+export async function handleGetFolderOnlyFilesContent(msg, s3Client, BaseMessage, ws) {
+    const { bucketName, folderName, userLogin } = msg.filesListRequest; 
+    console.log(" bucketName", bucketName,  "folderName", folderName,  "userLogin", userLogin);
+
+    // 1. Получаем РЕАЛЬНЫЕ ФАЙЛЫ в текущей папке
+    const files = await ImageRecord.find({ 
+        bucket: bucketName, 
+        folder: folderName 
+    }).lean();
+
+    const filesPayload = await Promise.all(files.map(async (file) => {
+    // Генерируем временную ссылку напрямую на Minio
+        const command = new GetObjectCommand({
+            Bucket: file.bucket,
+            Key: file.s3Key
+        });
+
+        // Ссылка будет валидна, например, 1 час (3600 секунд)
+        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+
+        return {
+            fileName: file.originalName,
+            mongoId: file._id.toString(),
+            url: signedUrl, // Теперь здесь прямая временная ссылка для QML Image
+            size: file.size || 0
+        };
+    }));
+
+    // 3. Собираем финальное сообщение согласно FilesFoldersListResponse
+    const responsePayload = BaseMessage.create({
+        filesListResponse: {
+            files: filesPayload
+        }
+    });
+
+    // 4. Кодируем и отправляем через WebSocket
+    const buffer = BaseMessage.encode(responsePayload).finish();
+    ws.send(buffer);
+
+    console.log(`Sent ${filesPayload.length} files to client`);
+}
