@@ -104,6 +104,22 @@ message DeleteBucketRequest {
     string bucketName = 1;
 }
 
+message RegisterRequest {
+  string userLogin = 1;
+  string password = 2;
+  string full_name = 3; // Доп. поле только для регистрации
+}
+
+message AuthRequest {
+  string userLogin = 1;
+  string password = 2;
+}
+
+message AuthResponse {
+  string token = 1;
+  string error = 2;
+}
+
 message BaseMessage {
   oneof content {
     Picture pict = 1;
@@ -122,5 +138,50 @@ message BaseMessage {
     DeleteFileRequest deleteFile = 14;
     DeleteFolderRequest deleteFolder = 15;
     DeleteBucketRequest deleteBucket = 16;
+    RegisterRequest regRequest = 17;
+    AuthRequest authRequest = 18;
+    AuthResponse authResponse = 19;
+  }
+}
+
+// For messages traveling: Client -> Server
+message ClientEnvelope {
+  enum Type {
+    UNKNOWN = 0;
+    LOGIN_REQUEST = 1;
+    CLIENT_MESSAGE = 2;
+  }
+  Type type = 1;
+  oneof content {
+    AddFileRequest addFile = 2;
+    AddFolderRequest addFolder = 3;
+    FilesFoldersListRequest listRequest = 4;
+    FilesOnlyListRequest filesListRequest = 5;
+    BucketsRequest reqUserBuckets = 6;
+    DeleteFileRequest deleteFile = 7;
+    DeleteFolderRequest deleteFolder = 8;
+    DeleteBucketRequest deleteBucket = 9;
+    RegisterRequest regRequest = 10;
+    AuthRequest authRequest = 11;
+  }
+}
+
+// For messages traveling: Server -> Client
+message ServerEnvelope {
+  enum Type {
+    UNKNOWN = 0;
+    AUTH_RESPONSE = 1;
+    SERVER_MESSAGE = 2;
+  }
+  Type type = 1;
+  oneof content {
+    ServerResponse serverResp = 2;
+    FileInfo fileInfo = 3;
+    FolderInfo folderInfo = 4;
+    FilesFoldersListResponse listResponse = 5;
+    FilesOnlyListResponse filesListResponse = 6;
+    BucketInfo bucketInfo = 7;
+    BucketsList buckets = 8;
+    AuthResponse authResponse = 9;
   }
 }

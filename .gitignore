@@ -151,3 +151,6 @@ minio_data/
 # Specific os files
 .DS_Store
 Thumbs.db
+
+# auxilary files
+ai.js2

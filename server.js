@@ -1,5 +1,5 @@
 import { handleDeleteFile, handleAddFile, handleViewFolder, handleGetFolderContent, handleGetFolderOnlyFilesContent} from './handlers.js';
-
+import { handleRegister, handleLogin} from './authHandlers.js';
 import https from 'https';
 import fs from 'fs';
 import { WebSocketServer } from 'ws';
@@ -173,6 +173,37 @@ protobuf.load("image.proto", (err, root) => {
                 }
             } catch (e) {
                 console.error("Error processing message:", e);
+            }
+            try {
+                // Декодируем входящий ClientEnvelope из сырых байт
+                const ClientEnvelope = root.lookupType('ClientEnvelope');
+                const envelope = ClientEnvelope.decode(message);
+                
+                const ClientType = ClientEnvelope.nested.Type;
+                // Определяем тип запроса на основе поля 'type'
+                switch (envelope.type) {
+                    case ClientType.LOGIN_REQUEST:
+                        if (envelope.authRequest) {
+                            await handleLogin(ws, envelope.authRequest);
+                        }
+                        break;
+
+                    case ClientType.CLIENT_MESSAGE:
+                        // Проверяем, пришел ли запрос на регистрацию
+                        if (envelope.regRequest) {
+                            await handleRegister(ws, envelope.regRequest);
+                        } else {
+                            console.log('Other CLIENT_MESSAGE content received:', envelope.content);
+                        }
+                        break;
+
+                    default:
+                        console.log('Received unknown or unhandled envelope type:', envelope.type);
+                        break;
+                }
+            } catch (error) {
+                console.error('Failed to process incoming message:', error);
+                sendAuthError(ws, 'Internal server error processing payload.');
             }
         });
     });
