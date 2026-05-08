@@ -1,5 +1,5 @@
 import { handleDeleteFile, handleAddFile, handleViewFolder, handleGetFolderContent, handleGetFolderOnlyFilesContent} from './handlers.js';
-import { handleRegister, handleLogin} from './authHandlers.js';
+import { handleRegister, handleLogin, verifyToken} from './authHandlers.js';
 import https from 'https';
 import fs from 'fs';
 import { WebSocketServer } from 'ws';
@@ -88,7 +88,7 @@ protobuf.load("image.proto", (err, root) => {
                     const userId = msg.pict.userLogin;
                     const bucket = msg.pict.bucketName
 
-                    console.log(" userId = ", userId, " filename= ", filename, "  contentType= ", msg.pict.contenttype,
+                    console.log(" Why is it here? userId = ", userId, " filename= ", filename, "  contentType= ", msg.pict.contenttype,
                         "   images= ", msg.pict.data
                     );
 
@@ -179,22 +179,34 @@ protobuf.load("image.proto", (err, root) => {
                 const ClientEnvelope = root.lookupType('ClientEnvelope');
                 const envelope = ClientEnvelope.decode(message);
                 
-                const ClientType = ClientEnvelope.nested.Type;
+                const ClientTypeValues = ClientEnvelope.nested.Type.values;
+                console.log("ClientTypeValues: ", ClientTypeValues);
                 // Определяем тип запроса на основе поля 'type'
+                console.log("ClientTypeValues.AUTH_REQUEST: ", ClientTypeValues.AUTH_REQUEST, "   envelope.type: ", envelope.type)
+//                    , "ClientTypeValues.AUTH_REQUEST: ", ClientTypeValues.AUTH_REQUEST)
                 switch (envelope.type) {
-                    case ClientType.LOGIN_REQUEST:
+                    case ClientTypeValues.AUTH_REQUEST:
+                        console.log("case ClientTypeValues.AUTH_REQUEST")
                         if (envelope.authRequest) {
+                            console.log("envelope.authRequest")
                             await handleLogin(ws, envelope.authRequest);
-                        }
-                        break;
-
-                    case ClientType.CLIENT_MESSAGE:
-                        // Проверяем, пришел ли запрос на регистрацию
-                        if (envelope.regRequest) {
+                        } else if (envelope.regRequest) {
+                            console.log("envelope.regRequest")
                             await handleRegister(ws, envelope.regRequest);
                         } else {
-                            console.log('Other CLIENT_MESSAGE content received:', envelope.content);
+                            console.log('Other AUTH_REQUEST content received:', envelope.content);
                         }
+                        break;
+                    case ClientTypeValues.CLIENT_MESSAGE:
+                        const token = envelope.token; 
+                        const decoded = verifyToken(token);
+                        if (!decoded) {
+                            return sendAuthError(ws, 'Unauthorized: Invalid token');
+                        }
+                        
+                        console.log(`User ${decoded.login} is authorized to see files`);
+                        // Проверяем, пришел ли запрос на регистрацию
+                        console.log('Other CLIENT_MESSAGE content received:', envelope.content);
                         break;
 
                     default:

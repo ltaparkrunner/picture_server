@@ -122,7 +122,7 @@ message AuthResponse {
 
 message BaseMessage {
   oneof content {
-    Picture pict = 1;
+    Picture empty = 1;
     AddFileRequest addFile = 2;
     AddFolderRequest addFolder = 3;
     ServerResponse serverResp = 4;
@@ -148,10 +148,11 @@ message BaseMessage {
 message ClientEnvelope {
   enum Type {
     UNKNOWN = 0;
-    LOGIN_REQUEST = 1;
+    AUTH_REQUEST = 1;
     CLIENT_MESSAGE = 2;
   }
   Type type = 1;
+  string token = 12;
   oneof content {
     AddFileRequest addFile = 2;
     AddFolderRequest addFolder = 3;
