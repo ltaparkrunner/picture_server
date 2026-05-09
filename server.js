@@ -43,22 +43,23 @@ async function getDownloadUrl(bucketName, fileName) {
 }
 
 const createCommand = new CreateBucketCommand({ 
-    Bucket: "pictures" 
+    Bucket: "images" 
 });
 async function bootstrap() {
     try {
+        console.log("An attempt to create backet:", createCommand.input.Bucket);
         await s3Client.send(createCommand);
-        console.log("Бакет 'images' создан.");
+        console.log("Bucket ", reateCommand.input.Bucket, " created successfully.");
     } catch (err) {
         if (err.Code === 'BucketAlreadyOwnedByYou' || err.Code === 'BucketAlreadyExists') {
-            console.log("Бакет 'images' уже существует, пропускаем создание.");
+            console.log("Bucket ", reateCommand.input.Bucket, " exists already, proceeding...");
         } else {
             console.error("Ошибка инициализации хранилища:", err);
         }
     }
 }
 
-bootstrap(); // performed once
+//  bootstrap(); // performed once
 protobuf.load("image.proto", (err, root) => {
     if (err) throw err;
     // Create HTTPS server
