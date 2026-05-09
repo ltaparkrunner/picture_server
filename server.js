@@ -72,7 +72,37 @@ protobuf.load("image.proto", (err, root) => {
     const wss = new WebSocketServer({ server: httpsServer });
     console.log("protobuf.load after creating new WebSocket.Server");
 
-    wss.on('connection', (ws) => {
+    wss.on('connection', (ws, req) => {
+        // 1. Получаем заголовок (в Node.js заголовки всегда в нижнем регистре)
+        const authHeader = req.headers['authorization'];
+
+        if (!authHeader) {
+            console.log("No authorization header");
+            ws.close(4001);
+            return;
+        }
+
+        // 2. Ожидаем формат "Bearer TOKEN_STRING", поэтому берем вторую часть
+        const token = authHeader.split(' ')[1];
+
+        if (!token) {
+            ws.close(4001);
+            return;
+        }
+
+        // 3. Проверяем JWT
+        try {
+            const decoded = jwt.verify(token, SECRET);
+            
+            // Привязываем данные к сокету
+            ws.userId = decoded.id;
+            ws.isAuthenticated = true;
+            
+            console.log(`User ${ws.userId} authorized via Headers`);
+        } catch (err) {
+            console.log("JWT Verification failed:", err.message);
+            ws.close(4002);
+        }
         console.log('Secure Qt Client connected via WSS');
 
         ws.on('message', async (message) => {

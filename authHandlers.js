@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
  */
 function generateToken(user) {
     // В payload кладем только безопасные данные (ID, логин)
+    console.log("Env SECRET_KEY: ", SECRET_KEY, "Env JWT_EXPIRES_IN: ", process.env.JWT_EXPIRES_IN) 
     return jwt.sign(
         { userId: user._id, login: user.login },
         SECRET_KEY,
