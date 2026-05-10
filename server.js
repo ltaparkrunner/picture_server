@@ -10,6 +10,16 @@ import { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, Lis
 
 import { ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import express from 'express';
+import jwt from 'jsonwebtoken';
+
+import router from './httpAuth.js';
+
+const app = express();
+app.use(express.json());
+app.use('/auth', router);
+
+app.listen(8081, () => console.log('Auth server running on port 8081'));
 
 // Настройки из окружения
 const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = process.env;
@@ -92,7 +102,8 @@ protobuf.load("image.proto", (err, root) => {
 
         // 3. Проверяем JWT
         try {
-            const decoded = jwt.verify(token, SECRET);
+            const secret = process.env.JWT_SECRET || 'secret_key';
+            const decoded = jwt.verify(token, secret);
             
             // Привязываем данные к сокету
             ws.userId = decoded.id;

@@ -1,70 +1,82 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-
-const app = express();
-app.use(express.json());
+import express from 'express';
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import User from './model/User.js';
 
 // 1. Схема пользователя для MongoDB
-const userSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true }
-});
+// const userSchema = new mongoose.Schema({
+//     username: { type: String, required: true, unique: true },
+//     password: { type: String, required: true }
+// });
 
-const User = mongoose.model('User', userSchema);
+// const User = mongoose.model('User', userSchema);
+const router = express.Router();
 
 // 2. Маршрут РЕГИСТРАЦИИ
-app.post('/register', async (req, res) => {
+router.post('/register', async (req, res) => {
+    console.log("Received registration request: ", req.body);
     try {
         const { username, password } = req.body;
-
+        const login = username;
         // Проверяем, не занято ли имя
-        const existingUser = await User.findOne({ username });
+        const existingUser = await User.findOne({ login });
         if (existingUser) {
             return res.status(400).json({ error: "Пользователь уже существует" });
         }
 
         // Хешируем пароль (солим 10 раз)
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // const hashedPassword = await bcrypt.hash(password, 10);
 
         // Создаем и сохраняем пользователя
         const newUser = new User({
-            username,
-            password: hashedPassword
+            login,
+            password: password
         });
 
+        console.log("Before await newUser.save(); ", newUser.login);
         await newUser.save();
-
+        const user = await User.findOne({ login });
+        console.log(//"Hashed version of incorrect password: ", hashedPassword, 
+            "  Stored hash: ", user.password);
         // Сразу создаем токен, чтобы пользователю не нужно было логиниться после регистрации
         const token = jwt.sign(
             { id: newUser._id }, 
             process.env.JWT_SECRET || 'secret_key', 
             { expiresIn: '2h' }
         );
-
+        console.log("User registered successfully: ", newUser.login);
         res.status(201).json({ 
             message: "Пользователь создан",
             token: token 
         });
 
     } catch (err) {
+        console.log("Error during registration: ", err);
         res.status(500).json({ error: "Ошибка сервера при регистрации" });
     }
 });
 
 // 3. Обновленный маршрут ЛОГИНА (с проверкой хеша)
-app.post('/login', async (req, res) => {
+router.post('/login', async (req, res) => {
+    console.log("Received login request: ", req.body);
     try {
         const { username, password } = req.body;
-        const user = await User.findOne({ username });
+        const login = username;
+        const user = await User.findOne({ login });
 
         if (!user) return res.status(401).json({ error: "Неверный логин" });
-
+        console.log("User found: ", login);
         // Сравниваем присланный пароль с хешем в базе
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(401).json({ error: "Неверный пароль" });
-
+        if (!isMatch) {
+            console.log("Incorrect password for user: ", password);
+            const hashedPassword = await bcrypt.hash(password, 10);
+            console.log("Hashed version of incorrect password: ", hashedPassword, 
+                "  Stored hash: ", user.password);
+            return res.status(401).json({ error: "Неверный пароль" });
+        }
+        console.log("Correct password: ", password);
         const token = jwt.sign({ id: user._id }, 'secret_key', { expiresIn: '2h' });
         res.json({ token });
     } catch (err) {
@@ -72,4 +84,57 @@ app.post('/login', async (req, res) => {
     }
 });
 
-app.listen(8081, () => console.log('Auth server running on port 8081'));
+// Экспортируем роутер
+// module.exports = router;
+export default router; 
+
+//app.listen(8081, () => console.log('Auth server running on port 8081'));
+
+// 2. Логика в маршруте регистрации
+
+// В S3 (Minio) папки не существуют как физические объекты — они создаются автоматически,
+//  когда вы загружаете файл по пути folder/file.dat. Поэтому при регистрации лучше всего
+//   создать «маркер-файл» или просто убедиться, что основной бакет существует.
+/*
+app.post('/register', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        // ... (код проверки и хеширования из предыдущего шага) ...
+
+        const newUser = new User({ username, password: hashedPassword });
+        await newUser.save();
+
+        // --- РАБОТА С MINIO ---
+        const userId = newUser._id.toString();
+        
+        // 1. Проверяем/создаем общий бакет
+        const bucketExists = await minioClient.bucketExists(BUCKET_NAME);
+        if (!bucketExists) {
+            await minioClient.makeBucket(BUCKET_NAME);
+        }
+
+        // 2. Создаем "виртуальную папку" для пользователя.
+        // В S3 мы просто кладем пустой файл .placeholder в папку пользователя.
+        const placeholderPath = `users/${userId}/.placeholder`;
+        await minioClient.putObject(BUCKET_NAME, placeholderPath, "init");
+
+        // --- ЗАВЕРШЕНИЕ ---
+        const token = jwt.sign({ id: userId }, 'secret_key', { expiresIn: '2h' });
+        res.status(201).json({ token });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Ошибка при создании окружения пользователя" });
+    }
+});
+*/
+
+// Когда Qt-клиент пришлет картинку, используйте этот userId:
+// ws.on('message', async (data) => {
+//     const fileName = `img_${Date.now()}.jpg`;
+//     const objectPath = `users/${ws.userId}/${fileName}`; // Используем ID из сокета
+
+//     await minioClient.putObject(BUCKET_NAME, objectPath, data);
+//     console.log(`Файл сохранен для пользователя ${ws.userId}`);
+// });
