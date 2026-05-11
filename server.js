@@ -14,6 +14,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 
 import router from './httpAuth.js';
+import User from './model/User.js';
 
 const app = express();
 app.use(express.json());
@@ -78,50 +79,95 @@ protobuf.load("image.proto", (err, root) => {
         cert: fs.readFileSync('./cert.pem'),
         minVersion: 'TLSv1.2'// Allow TLS 1.2
     });
-    // Bind WebSocket to HTTPS server
-    const wss = new WebSocketServer({ server: httpsServer });
-    console.log("protobuf.load after creating new WebSocket.Server");
 
-    wss.on('connection', (ws, req) => {
-        // 1. Получаем заголовок (в Node.js заголовки всегда в нижнем регистре)
-        const authHeader = req.headers['authorization'];
-
-        if (!authHeader) {
-            console.log("No authorization header");
-            ws.close(4001);
+    const wss = new WebSocketServer({ noServer: true});
+    httpsServer.on('upgrade', (request, socket, head) => {
+        // 3. Извлекаем заголовок авторизации
+        console.log("Upgrade request received with headers:", request.headers);
+        const authHeader = request.headers['authorization'];
+    
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            console.log("Unauthorized upgrade attempt");
+            // 4. Отклоняем на уровне HTTP, не переходя в WebSocket
+            socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+            socket.destroy();
             return;
         }
-
-        // 2. Ожидаем формат "Bearer TOKEN_STRING", поэтому берем вторую часть
         const token = authHeader.split(' ')[1];
 
-        if (!token) {
-            ws.close(4001);
-            return;
-        }
-
-        // 3. Проверяем JWT
         try {
+            // 2. Верифицируем токен (проверит и подпись, и expiration time)
             const secret = process.env.JWT_SECRET || 'secret_key';
             const decoded = jwt.verify(token, secret);
-            
-            // Привязываем данные к сокету
-            ws.userId = decoded.id;
-            ws.isAuthenticated = true;
-            
-            console.log(`User ${ws.userId} authorized via Headers`);
+    
+            // 3. Сохраняем данные пользователя прямо в запрос, чтобы достать их позже
+            request.user = decoded; 
+    
+            // 4. Завершаем апгрейд
+            wss.handleUpgrade(request, socket, head, (ws) => {
+                wss.emit('connection', ws, request);
+            });
         } catch (err) {
-            console.log("JWT Verification failed:", err.message);
-            ws.close(4002);
+            console.error("JWT Error:", err.message);
+            socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+            socket.destroy();
         }
-        console.log('Secure Qt Client connected via WSS');
+        // console.log("Everything is OK");
+        // 5. Если все ок, завершаем handshake вручную
+        // wss.handleUpgrade(request, socket, head, (ws) => {
+        //     wss.emit('connection', ws, request);
+        // });
+    });
+    // Bind WebSocket to HTTPS server
+    // const wss = new WebSocketServer({ server: httpsServer });
+    // console.log("protobuf.load after creating new WebSocket.Server");
+
+    wss.on('connection', (ws, req) => {
+        // // 1. Получаем заголовок (в Node.js заголовки всегда в нижнем регистре)
+        // const authHeader = req.headers['authorization'];
+
+        // if (!authHeader) {
+        //     console.log("No authorization header");
+        //     ws.close(4001);
+        //     return;
+        // }
+
+        // // 2. Ожидаем формат "Bearer TOKEN_STRING", поэтому берем вторую часть
+        // const token = authHeader.split(' ')[1];
+
+        // if (!token) {
+        //     ws.close(4001);
+        //     return;
+        // }
+
+        // // 3. Проверяем JWT
+        // try {
+        //     const secret = process.env.JWT_SECRET || 'secret_key';
+        //     const decoded = jwt.verify(token, secret);
+            
+        //     // Привязываем данные к сокету
+        //     ws.userId = decoded.id;
+        //     ws.isAuthenticated = true;
+            
+        //     console.log(`User ${ws.userId} authorized via Headers`);
+        // } catch (err) {
+        //     console.log("JWT Verification failed:", err.message);
+        //     ws.close(4002);
+        // }
+        console.log('Secure Qt Client connected via WSS: ', req.user);
 
         ws.on('message', async (message) => {
             try {
                 // Decoding Protobuf message
+                console.log("Received message of type: ", typeof message, " and length: ", message.length);
+                console.log("User: ", User, " and length: ", message.length);
                 const BaseMessage = root.lookupType("BaseMessage");
                 const msg = BaseMessage.decode(message);
 
+                const user = await User.findOne({ _id: req.user.id });
+                const emaillogin = user ? user.login : "Unknown";
+                console.log("Decoded Protobuf message content: ", msg.content, " from user: ", emaillogin); 
+                
                 if(msg.content === "pict"){
                     const objName = msg.pict.filename;
                     const img_data = Buffer.from(msg.pict.data);
