@@ -295,7 +295,10 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
         { $group: { _id: "$folderNm" } } // Группируем, чтобы получить уникальные имена
     ]);
     console.log("Real folders in folder: ", folders);
-// ... (после вычисления folders и files в вашей функции)
+    const foldersval = folders.map(({ _id }) => _id);
+
+    console.log(foldersval); 
+    // ... (после вычисления folders и files в вашей функции)
     const minioPath = "http://minio:9000/" + bucketName + "/";
     // 1. Подготавливаем массив файлов для Protobuf
     // const filesPayload = files.map(file => ({
@@ -327,7 +330,7 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
     // 2. Подготавливаем массив папок для Protobuf
     // В вашем варианте folders — это Set или массив строк (имен подпапок)
     const foldersPayload = Array.from(folders).map(folderNm => ({
-        folderName: folderNm,
+        folderName: folderNm._id,
         // URL для папок обычно не используется, но структура требует string
         url: minioPath + folderName + "/" + folderNm
     }));
@@ -341,7 +344,7 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
         // Ваша структура FilesFoldersListResponse
         listResponse: {
             files: filesPayload,
-            folders: [] //foldersPayload
+            folders: foldersPayload
         }
     });
     console.log("Final response payload: ", responsePayload);
