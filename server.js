@@ -1,4 +1,4 @@
-import { handleDeleteFile, handleViewFolder, handleGetFolderContent, handleGetFolderOnlyFilesContent} from './handlers.js';
+import { handleViewFolder, handleGetFolderContent, handleGetFolderOnlyFilesContent} from './handlers.js';
 import { handleRegister, handleLogin, verifyToken} from './authHandlers.js';
 import https from 'https';
 import fs from 'fs';
@@ -15,7 +15,7 @@ import jwt from 'jsonwebtoken';
 
 import router from './httpAuth.js';
 import User from './model/User.js';
-import { handleGetUserBuckets, handleAddFile } from './auxHandler.js';
+import { handleGetUserBuckets, handleAddFile, handleListRequest, handleDeleteFile } from './auxHandler.js';
 
 const app = express();
 app.use(express.json());
@@ -241,17 +241,18 @@ protobuf.load("image.proto", (err, root) => {
                     });
                     ws.send(BaseMessage.encode(responsePayload).finish());
                 }
-                if(msg.content === "deleteFile"){
+                if(msg.content === "deleteFile2"){
                     await handleDeleteFile(msg, root, s3Client, BaseMessage, ws);
                 }
                 // if(msg.content === "addFile"){
                 //     await handleAddFile(msg, root, s3Client, BaseMessage, ws);
                 // }
                 if(msg.content === "listRequest") {
+
                     await handleGetFolderContent(msg, s3Client, BaseMessage, ws);
                     // await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
                 }
-                if(msg.content === "filesListRequest") {
+                if(msg.content === "filesListRequest3") {
                     await handleGetFolderOnlyFilesContent(msg, s3Client, BaseMessage, ws);
                     // await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
                 }
@@ -298,6 +299,13 @@ protobuf.load("image.proto", (err, root) => {
                         if(envelope.addFile){
                             // async function handleAddFile(msg, root, s3Client, BaseMessage, ws)
                             await handleAddFile(ws, envelope.addFile, s3Client, req.user.id);
+                        }
+                        if(envelope.listRequest){
+                            // async function handleAddFile(msg, root, s3Client, BaseMessage, ws)
+                            await handleListRequest(ws, envelope.listRequest, s3Client, req.user.id);
+                        }
+                        if(envelope.deleteFile){
+                            await handleDeleteFile(ws, envelope.deleteFile, s3Client, req.user.id);
                         }
                         console.log(`User ${user.login} is authorized to see files`);
                         // Проверяем, пришел ли запрос на регистрацию
