@@ -1,4 +1,4 @@
-import { handleDeleteFile, handleAddFile, handleViewFolder, handleGetFolderContent, handleGetFolderOnlyFilesContent} from './handlers.js';
+import { handleDeleteFile, handleViewFolder, handleGetFolderContent, handleGetFolderOnlyFilesContent} from './handlers.js';
 import { handleRegister, handleLogin, verifyToken} from './authHandlers.js';
 import https from 'https';
 import fs from 'fs';
@@ -15,7 +15,7 @@ import jwt from 'jsonwebtoken';
 
 import router from './httpAuth.js';
 import User from './model/User.js';
-import { handleGetUserBuckets } from './auxHandler.js';
+import { handleGetUserBuckets, handleAddFile } from './auxHandler.js';
 
 const app = express();
 app.use(express.json());
@@ -244,9 +244,9 @@ protobuf.load("image.proto", (err, root) => {
                 if(msg.content === "deleteFile"){
                     await handleDeleteFile(msg, root, s3Client, BaseMessage, ws);
                 }
-                if(msg.content === "addFile"){
-                    await handleAddFile(msg, root, s3Client, BaseMessage, ws);
-                }
+                // if(msg.content === "addFile"){
+                //     await handleAddFile(msg, root, s3Client, BaseMessage, ws);
+                // }
                 if(msg.content === "listRequest") {
                     await handleGetFolderContent(msg, s3Client, BaseMessage, ws);
                     // await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
@@ -291,16 +291,14 @@ protobuf.load("image.proto", (err, root) => {
                         }
                         break;
                     case ClientTypeValues.CLIENT_MESSAGE:
-                        // const token = envelope.token; 
-                        // const decoded = verifyToken(token);
-                        // if (!decoded) {
-                        //     return sendAuthError(ws, 'Unauthorized: Invalid token');
-                        // }
                         if(envelope.reqUserBuckets){
                             // console.log("Received bucket list request from user: ", req.user ? req.user.id : "Unknown");
                             await handleGetUserBuckets(ws, envelope.reqUserBuckets, s3Client, req.user ? req.user.id : "Unknown");
+                        }                   //      envelope.content
+                        if(envelope.addFile){
+                            // async function handleAddFile(msg, root, s3Client, BaseMessage, ws)
+                            await handleAddFile(ws, envelope.addFile, s3Client, req.user.id);
                         }
-
                         console.log(`User ${user.login} is authorized to see files`);
                         // Проверяем, пришел ли запрос на регистрацию
                         console.log('Other CLIENT_MESSAGE content received:', envelope.content);

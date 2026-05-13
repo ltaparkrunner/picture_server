@@ -294,7 +294,7 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
         }},
         { $group: { _id: "$folderNm" } } // Группируем, чтобы получить уникальные имена
     ]);
-
+    console.log("Real folders in folder: ", folders);
 // ... (после вычисления folders и files в вашей функции)
     const minioPath = "http://minio:9000/" + bucketName + "/";
     // 1. Подготавливаем массив файлов для Protobuf
@@ -331,7 +331,7 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
         // URL для папок обычно не используется, но структура требует string
         url: minioPath + folderName + "/" + folderNm
     }));
-
+    console.log("Prepared folders payload: ", foldersPayload);
     // 3. Собираем финальное сообщение согласно FilesFoldersListResponse
     const responsePayload = BaseMessage.create({
         // serverResp: {
@@ -341,12 +341,13 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
         // Ваша структура FilesFoldersListResponse
         listResponse: {
             files: filesPayload,
-            folders: foldersPayload
+            folders: [] //foldersPayload
         }
     });
-
+    console.log("Final response payload: ", responsePayload);
     // 4. Кодируем и отправляем через WebSocket
     const buffer = BaseMessage.encode(responsePayload).finish();
+    console.log("Encoded response buffer: ", buffer);
     ws.send(buffer);
 
     console.log(`Sent ${filesPayload.length} files and ${foldersPayload.length} folders to client`);

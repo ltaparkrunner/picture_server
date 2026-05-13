@@ -4,15 +4,8 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from './model/User.js';
 
-// 1. Схема пользователя для MongoDB
-// const userSchema = new mongoose.Schema({
-//     username: { type: String, required: true, unique: true },
-//     password: { type: String, required: true }
-// });
-
-// const User = mongoose.model('User', userSchema);
 const router = express.Router();
-
+const USERS = 'users';
 // 2. Маршрут РЕГИСТРАЦИИ
 router.post('/register', async (req, res) => {
     console.log("Received registration request: ", req.body);
@@ -24,10 +17,6 @@ router.post('/register', async (req, res) => {
         if (existingUser) {
             return res.status(400).json({ error: "Пользователь уже существует" });
         }
-
-        // Хешируем пароль (солим 10 раз)
-        // const hashedPassword = await bcrypt.hash(password, 10);
-
         // Создаем и сохраняем пользователя
         const newUser = new User({
             login,
@@ -36,9 +25,16 @@ router.post('/register', async (req, res) => {
 
         console.log("Before await newUser.save(); ", newUser.login);
         await newUser.save();
-        const user = await User.findOne({ login });
-        console.log(//"Hashed version of incorrect password: ", hashedPassword, 
-            "  Stored hash: ", user.password);
+        const userId = newUser._id.toString();
+        const bucketExists = await minioClient.bucketExists(BUCKET_NAME);
+        if (!bucketExists) {
+            await minioClient.makeBucket(BUCKET_NAME);
+        }
+        // 2. Create a "virtual folder" for the user.
+        // In S3, we simply place an empty .placeholder file in the user's folder.
+        //  const placeholderPath = `users/${userId}/.placeholder`;
+        const placeholderPath = `${USERS}/${userId}/.placeholder`;
+        await minioClient.putObject(BUCKET_NAME, placeholderPath, "init");
         // Сразу создаем токен, чтобы пользователю не нужно было логиниться после регистрации
         const token = jwt.sign(
             { id: newUser._id }, 
