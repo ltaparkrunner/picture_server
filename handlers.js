@@ -332,7 +332,8 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
     const foldersPayload = Array.from(folders).map(folderNm => ({
         folderName: folderNm._id,
         // URL для папок обычно не используется, но структура требует string
-        url: minioPath + folderName + "/" + folderNm
+        //  url: minioPath + folderName + "/" + folderNm
+        url: minioPath + folderName + folderNm._id + "/"
     }));
     console.log("Prepared folders payload: ", foldersPayload);
     // 3. Собираем финальное сообщение согласно FilesFoldersListResponse
