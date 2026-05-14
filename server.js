@@ -121,48 +121,8 @@ protobuf.load("image.proto", (err, root) => {
             socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
             socket.destroy();
         }
-        // console.log("Everything is OK");
-        // 5. Если все ок, завершаем handshake вручную
-        // wss.handleUpgrade(request, socket, head, (ws) => {
-        //     wss.emit('connection', ws, request);
-        // });
     });
-    // Bind WebSocket to HTTPS server
-    // const wss = new WebSocketServer({ server: httpsServer });
-    // console.log("protobuf.load after creating new WebSocket.Server");
-
     wss.on('connection', (ws, req) => {
-        // // 1. Получаем заголовок (в Node.js заголовки всегда в нижнем регистре)
-        // const authHeader = req.headers['authorization'];
-
-        // if (!authHeader) {
-        //     console.log("No authorization header");
-        //     ws.close(4001);
-        //     return;
-        // }
-
-        // // 2. Ожидаем формат "Bearer TOKEN_STRING", поэтому берем вторую часть
-        // const token = authHeader.split(' ')[1];
-
-        // if (!token) {
-        //     ws.close(4001);
-        //     return;
-        // }
-
-        // // 3. Проверяем JWT
-        // try {
-        //     const secret = process.env.JWT_SECRET || 'secret_key';
-        //     const decoded = jwt.verify(token, secret);
-            
-        //     // Привязываем данные к сокету
-        //     ws.userId = decoded.id;
-        //     ws.isAuthenticated = true;
-            
-        //     console.log(`User ${ws.userId} authorized via Headers`);
-        // } catch (err) {
-        //     console.log("JWT Verification failed:", err.message);
-        //     ws.close(4002);
-        // }
         console.log('Secure Qt Client connected via WSS: ', req.user);
 
         ws.on('message', async (message) => {
@@ -255,7 +215,7 @@ protobuf.load("image.proto", (err, root) => {
                 // if(msg.content === "addFile"){
                 //     await handleAddFile(msg, root, s3Client, BaseMessage, ws);
                 // }
-                if(msg.content === "listRequest") {
+                if(msg.content === "listRequest4") {
 
                     await handleGetFolderContent(msg, s3Client, BaseMessage, ws);
                     // await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
