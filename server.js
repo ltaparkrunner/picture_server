@@ -17,6 +17,10 @@ import router from './httpAuth.js';
 import User from './model/User.js';
 import { handleGetUserBuckets, handleAddFile, handleListRequest, handleDeleteFile } from './auxHandler.js';
 
+import 'dotenv/config';
+
+const USERS = process.env.USERS || 'users';
+console.log("Config variable process.env.USERS: ", process.env.USERS);
 const app = express();
 app.use(express.json());
 app.use('/auth', router);
@@ -25,6 +29,8 @@ app.listen(8081, () => console.log('Auth server running on port 8081'));
 
 // Настройки из окружения
 const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = process.env;
+
+console.log("S3_ENDPOINT: ", S3_ENDPOINT, " S3_ACCESS_KEY: ", S3_ACCESS_KEY, " S3_SECRET_KEY: ", S3_SECRET_KEY, " S3_BUCKET: ", S3_BUCKET, " MONGO_URL: ", MONGO_URL);  
 
 const serverConfig = {
     key: fs.readFileSync('key.pem'),
@@ -97,6 +103,7 @@ protobuf.load("image.proto", (err, root) => {
         const token = authHeader.split(' ')[1];
 
         try {
+            console.log("process.env.JWT_SECRET: ", process.env.JWT_SECRET);
             // 2. Верифицируем токен (проверит и подпись, и expiration time)
             const secret = process.env.JWT_SECRET || 'secret_key';
             const decoded = jwt.verify(token, secret);
@@ -213,7 +220,7 @@ protobuf.load("image.proto", (err, root) => {
                     const { Contents } = await s3Client.send(command);
                     const imageInfos = await Promise.all((Contents || []).map(async (file) => {
                         const getCommand = new GetObjectCommand({ Bucket: bucketName, Key: file.Key });
-                        const url = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
+                        const url = await getSignedUrl(s3Client, getCommand, { expiresIn: process.env.S3_REF_EXPIRES || 3600 });
                         return { fileName: file.Key, url: url };
                     }));
                     //  console.log("imageInfos = ", imageInfos);

@@ -317,7 +317,7 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
         });
 
         // Ссылка будет валидна, например, 1 час (3600 секунд)
-        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: process.env.S3_REF_EXPIRES || 3600 });
 
         return {
             fileName: file.originalName,
@@ -375,7 +375,7 @@ export async function handleGetFolderOnlyFilesContent(msg, s3Client, BaseMessage
         });
 
         // Ссылка будет валидна, например, 1 час (3600 секунд)
-        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: process.env.S3_REF_EXPIRES || 3600 });
 
         return {
             fileName: file.originalName,

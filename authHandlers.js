@@ -6,13 +6,16 @@ import dotenv from 'dotenv';
 /**
  * Генерирует токен при успешном логине
  */
+const SECRET_KEY = process.env.JWT_SECRET || 'secret_key';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '4h';
 function generateToken(user) {
     // В payload кладем только безопасные данные (ID, логин)
-    console.log("Env SECRET_KEY: ", SECRET_KEY, "Env JWT_EXPIRES_IN: ", process.env.JWT_EXPIRES_IN) 
+    console.log("Env SECRET_KEY: ", SECRET_KEY, "Env JWT_EXPIRES_IN: ", JWT_EXPIRES_IN)
+
     return jwt.sign(
         { userId: user._id, login: user.login },
         SECRET_KEY,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        { expiresIn: JWT_EXPIRES_IN }
     );
 }
 
@@ -31,8 +34,6 @@ export function verifyToken(token) {
 // ОБРАБОТЧИКИ ЗАПРОСОВ (БИЗНЕС-ЛОГИКА)
 // ==========================================
 
-dotenv.config();
-const SECRET_KEY = process.env.JWT_SECRET || 'fallback_secret';
 const root = await protobuf.load('image.proto');
 const ServerEnvelope = root.lookupType('ServerEnvelope');
 //  const ServerType = ServerEnvelope.nested.Type;

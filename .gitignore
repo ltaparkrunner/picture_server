@@ -154,3 +154,6 @@ Thumbs.db
 
 # auxilary files
 ai.js2
+
+#config info
+.env    

@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import User from './model/User.js';
 
 const router = express.Router();
-const USERS = 'users';
+const USERS = process.env.USERS || 'users';
 // 2. Маршрут РЕГИСТРАЦИИ
 router.post('/register', async (req, res) => {
     console.log("Received registration request: ", req.body);
@@ -36,10 +36,12 @@ router.post('/register', async (req, res) => {
         const placeholderPath = `${USERS}/${userId}/.placeholder`;
         await minioClient.putObject(BUCKET_NAME, placeholderPath, "init");
         // Сразу создаем токен, чтобы пользователю не нужно было логиниться после регистрации
+        console.log("process.env.JWT_SECRET: ", process.env.JWT_SECRET);
+        console.log("process.env.JWT_EXPIRES_IN: ", process.env.JWT_EXPIRES_IN);
         const token = jwt.sign(
             { id: newUser._id }, 
             process.env.JWT_SECRET || 'secret_key', 
-            { expiresIn: '2h' }
+            { expiresIn: process.env.JWT_EXPIRES_IN || '4h' }
         );
         console.log("User registered successfully: ", newUser.login);
         res.status(201).json({ 
@@ -56,6 +58,9 @@ router.post('/register', async (req, res) => {
 // 3. Обновленный маршрут ЛОГИНА (с проверкой хеша)
 router.post('/login', async (req, res) => {
     console.log("Received login request: ", req.body);
+    console.log("process.env.USERS: ", process.env.USERS); 
+    console.log("process.env.JWT_SECRET: ", process.env.JWT_SECRET);
+    console.log("process.env.JWT_EXPIRES_IN: ", process.env.JWT_EXPIRES_IN);
     try {
         const { username, password } = req.body;
         const login = username;
@@ -73,7 +78,8 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: "Неверный пароль" });
         }
         console.log("Correct password: ", password);
-        const token = jwt.sign({ id: user._id }, 'secret_key', { expiresIn: '2h' });
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret_key', 
+            { expiresIn: process.env.JWT_EXPIRES_IN || '4h' });
         res.json({ token });
     } catch (err) {
         res.status(500).json({ error: "Ошибка входа" });
@@ -83,8 +89,6 @@ router.post('/login', async (req, res) => {
 // Экспортируем роутер
 // module.exports = router;
 export default router; 
-
-//app.listen(8081, () => console.log('Auth server running on port 8081'));
 
 // 2. Логика в маршруте регистрации
 
@@ -125,12 +129,3 @@ app.post('/register', async (req, res) => {
     }
 });
 */
-
-// Когда Qt-клиент пришлет картинку, используйте этот userId:
-// ws.on('message', async (data) => {
-//     const fileName = `img_${Date.now()}.jpg`;
-//     const objectPath = `users/${ws.userId}/${fileName}`; // Используем ID из сокета
-
-//     await minioClient.putObject(BUCKET_NAME, objectPath, data);
-//     console.log(`Файл сохранен для пользователя ${ws.userId}`);
-// });
