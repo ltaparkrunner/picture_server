@@ -4,28 +4,28 @@ syntax = "proto3";
 message Picture {
   string fileName = 1;    // Имя файла в Minio
   string folderId = 2;     // ID документа в MongoDB
-  string userLogin = 3;      // ID пользователя для проверки прав
-  string bucketName = 4;  // Имя корзины (bucket)
-  string contentType = 5;
-  bytes data = 6;
-  int64 timestamp = 7;
+//  string userLogin = 3;      // ID пользователя для проверки прав
+//  string bucketName = 4;  // Имя корзины (bucket)
+  string contentType = 3;
+  bytes data = 4;
+  int64 timestamp = 5;
 }
 
 message AddFileRequest{
   string fileName = 1;    // Имя файла в Minio
-  string userLogin = 2;      // ID пользователя для проверки прав
-  string bucketName = 3;  // Имя корзины (bucket)
-  string folder = 4;
-  string info = 5;
-  bytes data = 6;
+//  string userLogin = 2;      // ID пользователя для проверки прав
+//  string bucketName = 3;  // Имя корзины (bucket)
+  string folder = 2;
+  string info = 3;
+  bytes data = 4;
 }
 
 message AddFolderRequest{
   string folderName = 1;    // Имя папки в Minio
-  string userLogin = 2;      // ID пользователя для проверки прав
-  string bucketName = 3;  // Имя корзины (bucket)
-  string folder = 4;
-  string info = 5;
+//  string userLogin = 2;      // ID пользователя для проверки прав
+//  string bucketName = 3;  // Имя корзины (bucket)
+  string folder = 2;
+  string info = 3;
 }
 
 message ServerResponse{ // to AddFileFolderRequest
@@ -34,15 +34,15 @@ message ServerResponse{ // to AddFileFolderRequest
 }
 
 message FilesFoldersListRequest {
-  string bucketName = 1;
-  string folderName = 2;
-  string userLogin = 3;
+//  string bucketName = 1;
+  string folderName = 1;
+//  string userLogin = 3;
 }
 
 message FilesOnlyListRequest {
-  string bucketName = 1;
-  string folderName = 2;
-  string userLogin = 3;
+//  string bucketName = 1;
+  string folderName = 1;
+//  string userLogin = 3;
 }
 
 message FileInfo {
@@ -79,25 +79,18 @@ message BucketsList {                 // respond to BucketsRequest
   repeated BucketInfo bucketInf = 1;
 }
 
-//message DeleteFileRequest {
-//    string fileName = 1;    // Имя файла в Minio
-//    string fileId = 2;     // ID документа в MongoDB
-//    string userLogin = 3;      // ID пользователя для проверки прав
-//    string bucketName = 4;  // Имя корзины (bucket)
-//}
-
 message DeleteFileRequest {
     string fileName = 1;    // Имя файла в Minio
     string mongoId = 2;     // ID документа в MongoDB
-    string userLogin = 3;      // ID пользователя для проверки прав
-    string bucketName = 4;  // Имя корзины (bucket)
+//    string userLogin = 3;      // ID пользователя для проверки прав
+//    string bucketName = 4;  // Имя корзины (bucket)
 }
 
 message DeleteFolderRequest {
     string folderName = 1;    // Имя файла в Minio
     string fileId = 2;     // ID документа в MongoDB
-    string userLogin = 3;      // ID пользователя для проверки прав
-    string bucketName = 4;  // Имя корзины (bucket)
+//    string userLogin = 3;      // ID пользователя для проверки прав
+//    string bucketName = 4;  // Имя корзины (bucket)
 }
 
 message DeleteBucketRequest {

@@ -146,8 +146,8 @@ export async function handleAddFile(ws, msg, s3Client, userId){
 }
 
 export async function handleListRequest(ws, msg, s3Client, userId){
-    const { bucketName, folderName, userLogin } = msg; 
-    console.log("   folderName", folderName,  "userLogin", userLogin);
+    const {/* bucketName, */ folderName, /* userLogin*/ } = msg; 
+    console.log("   folderName", folderName); //,  "userLogin", userLogin);
 
     // 1. We get REAL FILES in the current folder
     const files = await ImageRecord.find({ 
@@ -208,10 +208,10 @@ export async function handleListRequest(ws, msg, s3Client, userId){
 export async function  handleDeleteFile(ws, msg, s3Client, userId){
     const fname = msg.fileName
 
-    const usrLogin = msg.userLogin
+    //  const usrLogin = msg.userLogin
     const mongoId = msg.mongoId
     console.log("deleteFile:  fname = ", fname, 
-        "usrLogin = ", usrLogin, "mongoId = ", mongoId)
+       /* "usrLogin = ", usrLogin, */ "mongoId = ", mongoId)
 
     const record = await ImageRecord.findById(mongoId);
     

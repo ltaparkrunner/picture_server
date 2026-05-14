@@ -20,6 +20,7 @@ import { handleGetUserBuckets, handleGetUserBucket, handleAddFile, handleListReq
 import 'dotenv/config';
 
 const USERS = process.env.USERS || 'users';
+const BUCKET = process.env.BUCKET_NAME || 'images';
 console.log("Config variable process.env.USERS: ", process.env.USERS);
 const app = express();
 app.use(express.json());
@@ -61,7 +62,7 @@ async function getDownloadUrl(bucketName, fileName) {
 }
 
 const createCommand = new CreateBucketCommand({ 
-    Bucket: "images" 
+    Bucket: BUCKET 
 });
 async function bootstrap() {
     try {
@@ -181,8 +182,8 @@ protobuf.load("image.proto", (err, root) => {
                     const img_data = Buffer.from(msg.pict.data);
                     console.log("Buffer size:", img_data.length);
                     const filename = msg.pict.fileName;
-                    const userId = msg.pict.userLogin;
-                    const bucket = msg.pict.bucketName
+//                    const userId = msg.pict.userLogin;
+//                    const bucket = msg.pict.bucketName
 
                     console.log(" Why is it here? userId = ", userId, " filename= ", filename, "  contentType= ", msg.pict.contenttype,
                         "   images= ", msg.pict.data
@@ -191,7 +192,7 @@ protobuf.load("image.proto", (err, root) => {
                     // Сохранение в Minio
                     const objectName = `${Date.now()}_${filename}`;
                     const command = new PutObjectCommand({
-                        Bucket: bucket,
+                        Bucket: BUCKET,
                         Key: objName,
                         Body: img_data
                     });
@@ -213,7 +214,7 @@ protobuf.load("image.proto", (err, root) => {
                     //const bucketName = 'images';
                     console.log("msg.listRequest.count = ", msg.listRequest.count, "msg.listRequest.bucketName = ", msg.listRequest.bucketName);
                     const command = new ListObjectsV2Command({
-                        Bucket: bucketName,
+                        Bucket: BUCKET,
                         MaxKeys: msg.listRequest.count // В нашем случае 6
                     });
 

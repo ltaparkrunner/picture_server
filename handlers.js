@@ -7,14 +7,15 @@ import User from './model/User.js';
 import  path from 'path';
 import  sanitize from 'sanitize-filename';
 
+const BUCKET = process.env.BUCKET_NAME || 'images';
 export async function handleDeleteFile(msg, root, s3Client, BaseMessage, ws){
     console.log("   handleDeleteFile(msg, root, s3Client, BaseMessage, ws)");
     const fname = msg.deleteFile.fileName
-    const bname = msg.deleteFile.bucketName
-    const usrLogin = msg.deleteFile.userLogin
+//    const bname = msg.deleteFile.bucketName
+//    const usrLogin = msg.deleteFile.userLogin
     const mongoId = msg.deleteFile.mongoId
-    console.log("deleteFile:  fname = ", fname, "bname = ", bname, 
-        "usrLogin = ", usrLogin, "mongoId = ", mongoId)
+    console.log("deleteFile:  fname = ", fname, //  "bname = ", bname, 
+       /* "usrLogin = ", usrLogin, */ "mongoId = ", mongoId)
 
     const record = await ImageRecord.findById(mongoId);
     
@@ -26,7 +27,7 @@ export async function handleDeleteFile(msg, root, s3Client, BaseMessage, ws){
     // 2. Удаляем физический файл из MinIO
     // Нам нужны имя бакета и s3Key (путь к файлу)
     const dltFile = new DeleteObjectCommand({
-        Bucket: record.bucket,
+        Bucket: BUCKET,
         Key: record.s3Key
     });
     await s3Client.send(dltFile);
@@ -51,14 +52,14 @@ export async function handleDeleteFile(msg, root, s3Client, BaseMessage, ws){
 
 export async function handleAddFile(msg, root, s3Client, BaseMessage, ws){
     const fileName = msg.addFile.fileName;
-    const usrLogin = msg.addFile.userLogin;
-    const bucket = msg.addFile.bucketName;
+//    const usrLogin = msg.addFile.userLogin;
+//    const bucket = msg.addFile.bucketName;
     const folder = msg.addFile.folder;
     const info = msg.addFile.info;
     const img_data = Buffer.from(msg.addFile.data);
     console.log("Buffer size:", img_data.length);
 
-    console.log(" fileName= ", fileName, " usrLogin = ", usrLogin, " bucket = ", bucket, 
+    console.log(" fileName= ", fileName,    // " usrLogin = ", usrLogin, " bucket = ", bucket, 
         " folder = ", folder, " info = ", info);
     const safefolder = sanitize(folder).replace(/\s+/g, '-');
     const {uniqueName, ext} = prepareFilename(fileName);
@@ -80,7 +81,7 @@ export async function handleAddFile(msg, root, s3Client, BaseMessage, ws){
         originalName: fileName,
         folder: safefolder,
         s3Key: s3Key,
-        bucket: bucket,
+        bucket: BUCKET,
         userLogin: usrLogin,
         info: {type : ext},
         size: img_data.length    
@@ -102,18 +103,18 @@ export async function handleAddFile(msg, root, s3Client, BaseMessage, ws){
 
 export async function handleViewFolder(msg, root, s3Client, BaseMessage, ws)
 {
-    const bucketName = msg.listRequest.bucketName;
+//    const bucketName = msg.listRequest.bucketName;
     const folderName = msg.listRequest.folderName;
-    const usrLogin = msg.listRequest.userLogin;
+//    const usrLogin = msg.listRequest.userLogin;
 
-    const minioPath = "http://minio:9000/" + bucketName + "/";
-    console.log("bucketName = ", bucketName, "  folderName = ", folderName, "  usrLogin = ", usrLogin);
+    const minioPath = "http://minio:9000/" + BUCKET + "/";
+    console.log(/* "bucketName = ", bucketName, */ "  folderName = ", folderName, /*"  usrLogin = ", usrLogin */);
 
     const { 
         currentPath: curPath, 
         subFolders: sFolders, 
         files: fls 
-    }  = await getFolderContent(bucketName,  folderName)
+    }  = await getFolderContent(BUCKET,  folderName)
 
     console.log("files = ", fls, "  folders = ", sFolders);
     const fs = fls.map(item => ({
@@ -140,7 +141,7 @@ async function getFolderContent(bucketName, folderPath = "") {
     
     // Ищем все записи в заданном бакете, начинающиеся с префикса
     const items = await ImageRecord.find({
-        bucket: bucketName,
+        bucket: BUCKET,
         s3Key: new RegExp('^' + prefix) 
     });
 
@@ -204,7 +205,7 @@ async function deleteImageAndRecord(recordId) {
         // 2. Удаляем физический файл из MinIO
         // Нам нужны имя бакета и s3Key (путь к файлу)
         const deleteImage = new DeleteObjectCommand({
-            Bucket: record.bucket,
+            Bucket: BUCKET,
             Key: record.s3Key
         })
         await s3Client.send(deleteImage);
@@ -268,12 +269,12 @@ function prepareFilename(originalName) {
 
 //export async function handleViewFolder(msg, root, s3Client, BaseMessage, ws)
 export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
-    const { bucketName, folderName, userLogin } = msg.listRequest; 
-    console.log(" bucketName", bucketName,  "folderName", folderName,  "userLogin", userLogin);
+    const { /*bucketName, */ folderName /*, userLogin */ } = msg.listRequest; 
+    console.log(/* " bucketName", bucketName, */ "folderName", folderName, /* "userLogin", userLogin*/);
 
     // 1. Получаем РЕАЛЬНЫЕ ФАЙЛЫ в текущей папке
     const files = await ImageRecord.find({ 
-        bucket: bucketName, 
+        bucket: BUCKET, 
         folder: folderName 
     }).lean();
 
@@ -283,7 +284,7 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
     const prefix = folderName === "" ? "" : (folderName.endsWith('/') ? folderName : folderName + '/');
     
     const folders = await ImageRecord.aggregate([
-        { $match: { bucket: bucketName, folder: new RegExp(`^${prefix}[^/]+`) } },
+        { $match: { bucket: BUCKET, folder: new RegExp(`^${prefix}[^/]+`) } },
         { $project: { 
             // Отрезаем текущий префикс и берем только следующий сегмент пути
             relativeFolder: { $substr: ["$folder", prefix.length, -1] } 
@@ -299,7 +300,7 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
 
     console.log(foldersval); 
     // ... (после вычисления folders и files в вашей функции)
-    const minioPath = "http://minio:9000/" + bucketName + "/";
+    const minioPath = "http://minio:9000/" + BUCKET + "/";
     // 1. Подготавливаем массив файлов для Protobuf
     // const filesPayload = files.map(file => ({
     //     fileName: file.originalName,
@@ -312,7 +313,7 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
     const filesPayload = await Promise.all(files.map(async (file) => {
     // Генерируем временную ссылку напрямую на Minio
         const command = new GetObjectCommand({
-            Bucket: file.bucket,
+            Bucket: BUCKET,
             Key: file.s3Key
         });
 
@@ -358,19 +359,19 @@ export async function handleGetFolderContent(msg, s3Client, BaseMessage, ws) {
 }
 
 export async function handleGetFolderOnlyFilesContent(msg, s3Client, BaseMessage, ws) {
-    const { bucketName, folderName, userLogin } = msg.filesListRequest; 
-    console.log(" bucketName", bucketName,  "folderName", folderName,  "userLogin", userLogin);
+    const { /*bucketName, */ folderName /*, userLogin */ } = msg.filesListRequest; 
+    console.log(/* " bucketName", bucketName, */  "folderName", folderName, /* "userLogin", userLogin */);
 
     // 1. Получаем РЕАЛЬНЫЕ ФАЙЛЫ в текущей папке
     const files = await ImageRecord.find({ 
-        bucket: bucketName, 
+        bucket: BUCKET, 
         folder: folderName 
     }).lean();
 
     const filesPayload = await Promise.all(files.map(async (file) => {
     // Генерируем временную ссылку напрямую на Minio
         const command = new GetObjectCommand({
-            Bucket: file.bucket,
+            Bucket: BUCKET,
             Key: file.s3Key
         });
 
