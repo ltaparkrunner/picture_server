@@ -41,7 +41,6 @@ const ServerTypeValues = ServerEnvelope.nested.Type.values;
 // Обработка регистрации (RegisterRequest)
 export async function handleRegister(ws, regRequest) {
     const { userLogin, password, full_name } = regRequest;
-
     try {
         // Проверяем, существует ли уже такой логин
         const existingUser = await User.findOne({ login: userLogin });

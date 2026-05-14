@@ -1,4 +1,4 @@
-import { GetObjectCommand, DeleteObjectCommand, PutObjectCommand, ListBucketsCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, DeleteObjectCommand, PutObjectCommand, ListBucketsCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
@@ -15,7 +15,8 @@ const ServerEnvelope = root.lookupType('ServerEnvelope');
 //  const ServerType = ServerEnvelope.nested.Type;
 const ServerTypeValues = ServerEnvelope.nested.Type.values;
 const USERS = process.env.USERS || 'users';
-console.log("process.env.USERS: ", process.env.USERS);
+const BUCKET = process.env.BUCKET_NAME || 'images';
+//  console.log("process.env.USERS: ", process.env.USERS);
 
 export async function handleGetUserBuckets(ws, msg, s3Client, user){
     const listBuckets = new ListBucketsCommand({})
@@ -37,41 +38,60 @@ export async function handleGetUserBuckets(ws, msg, s3Client, user){
     sendEnvelope(ws, responsePayload);
 }
 
+export async function handleGetUserBucket(ws, msg, s3Client, user){
+    try {
+        await s3Client.send(new HeadBucketCommand({ Bucket: BUCKET }));
+        const config = await s3Client.config.endpoint();
+        const bucketInfo = [{
+            bucketName: BUCKET, 
+            url: `${config.protocol}//${config.hostname}:${config.port}/${BUCKET}`
+        }];
+        console.log("bucketInfo: ", BUCKET);
+        const responsePayload = {
+            type: ServerTypeValues.SERVER_MESSAGE,
+            buckets: { bucketInf: bucketInfo}
+        };
+        sendEnvelope(ws, responsePayload);
+    } catch (error) {
+        if (error.name === "NotFound" || error.$metadata?.httpStatusCode === 404) {
+            const responsePayload = {
+                type: ServerTypeValues.SERVER_MESSAGE,
+                serverResp: { 
+                    content: "Bucket 'images' not found",
+                    status: "error"
+                }
+            };
+            sendEnvelope(ws, responsePayload);
+        }
+        const responsePayload = {
+            type: ServerTypeValues.SERVER_MESSAGE,
+            serverResp: { 
+                content: "Access denied or other error: " + error.message,
+                status: "error"
+            }
+        };
+        sendEnvelope(ws, responsePayload); // Other errors (e.g., Access Denied)
+    }
+}
+
 function sendEnvelope(ws, payloadStructure) {
     if (ws.readyState === ws.OPEN) {
         console.log("function sendEnvelope      payloadStructure.type: ", payloadStructure.type)
-        // 1. Проверяем структуру на соответствие .proto схеме
+        // 1. We check the structure for compliance with the .proto schema
         const errMsg = ServerEnvelope.verify(payloadStructure);
         if (errMsg) throw Error(errMsg);
-
-        // 2. Создаем объект сообщения
+        // 2. Create a message object
         const message = ServerEnvelope.create(payloadStructure);
-
-        // 3. Сериализуем в Uint8Array (бинарный формат Protobuf)
+        // 3. Serialize to Uint8Array (Protobuf binary format)
         const buffer = ServerEnvelope.encode(message).finish();
-
-        // 4. Отправляем байты клиенту Qt/C++
+        // 4. Sending bytes to a Qt/C++ client
         ws.send(buffer);
     }
 }
 
-// Функция сборки и отправки ServerEnvelope с ошибкой в ServerResponse
-function sendAuthError(ws, errorMessage) {
-    const responsePayload = {
-        type: ServerTypeValues.SERVER_MESSAGE,
-        authResponse: {
-            token: "",
-            error: errorMessage
-        }
-    };
-    sendEnvelope(ws, responsePayload);
-}
-
-
 export async function handleAddFile(ws, msg, s3Client, userId){
     const fileName = msg.fileName;
-//    const usrLogin = msg.addFile.userLogin;
-    const bucket = msg.bucketName;
+
     const folder = msg.folder;
     const info = msg.info;
     const img_data = Buffer.from(msg.data);
@@ -81,7 +101,7 @@ export async function handleAddFile(ws, msg, s3Client, userId){
     const user = await User.findOne({ _id: userId });
     const usrLogin = user ? user.login : "Unknown";
 
-    console.log(" fileName= ", fileName, " usrLogin = ", usrLogin, " bucket = ", bucket, 
+    console.log(" fileName= ", fileName, " usrLogin = ", usrLogin,
         " folder = ", folder, " info = ", info);
     const safefolder = sanitize(folder).replace(/\s+/g, '-');
     const {uniqueName, ext} = prepareFilename(fileName);
@@ -92,7 +112,7 @@ export async function handleAddFile(ws, msg, s3Client, userId){
     console.log("uniqueName:", uniqueName, " s3Key= ", s3Key);
 
     const command = new PutObjectCommand({
-        Bucket: bucket,
+        Bucket: BUCKET,
         Key: s3Key,
         Body: img_data
     });
@@ -105,7 +125,7 @@ export async function handleAddFile(ws, msg, s3Client, userId){
         originalName: fileName,
         folder: safefolder,
         s3Key: s3Key,
-        bucket: bucket,
+        bucket: BUCKET,
         userLogin: usrLogin,
         info: {type : ext},
         size: img_data.length    
@@ -127,11 +147,11 @@ export async function handleAddFile(ws, msg, s3Client, userId){
 
 export async function handleListRequest(ws, msg, s3Client, userId){
     const { bucketName, folderName, userLogin } = msg; 
-    console.log(" bucketName", bucketName,  "folderName", folderName,  "userLogin", userLogin);
+    console.log("   folderName", folderName,  "userLogin", userLogin);
 
     // 1. We get REAL FILES in the current folder
     const files = await ImageRecord.find({ 
-        bucket: bucketName, 
+        bucket: BUCKET, 
         folder: folderName 
     }).lean();
 
@@ -139,7 +159,7 @@ export async function handleListRequest(ws, msg, s3Client, userId){
     const prefix = folderName === "" ? "" : (folderName.endsWith('/') ? folderName : folderName + '/');
 
     const folders = await ImageRecord.aggregate([
-        { $match: { bucket: bucketName, folder: new RegExp(`^${prefix}[^/]+`) } },
+        { $match: { bucket: BUCKET, folder: new RegExp(`^${prefix}[^/]+`) } },
         { $project: { 
             // Cut off the current prefix and take only the next path segment
             relativeFolder: { $substr: ["$folder", prefix.length, -1] } 
@@ -151,11 +171,11 @@ export async function handleListRequest(ws, msg, s3Client, userId){
     ]);
     console.log("Real folders in folder: ", folders);
     const foldersval = folders.map(({ _id }) => _id);
-    const minioPath = "http://minio:9000/" + bucketName + "/";
+    const minioPath = "http://minio:9000/" + BUCKET + "/";
     const filesPayload = await Promise.all(files.map(async (file) => {
         // Generate a temporary link directly to Minio
         const command = new GetObjectCommand({
-            Bucket: file.bucket,
+            Bucket: BUCKET,
             Key: file.s3Key
         });
         // The link will be valid for, for example, 1 hour (3600 seconds)
@@ -187,10 +207,10 @@ export async function handleListRequest(ws, msg, s3Client, userId){
 
 export async function  handleDeleteFile(ws, msg, s3Client, userId){
     const fname = msg.fileName
-    const bname = msg.bucketName
+
     const usrLogin = msg.userLogin
     const mongoId = msg.mongoId
-    console.log("deleteFile:  fname = ", fname, "bname = ", bname, 
+    console.log("deleteFile:  fname = ", fname, 
         "usrLogin = ", usrLogin, "mongoId = ", mongoId)
 
     const record = await ImageRecord.findById(mongoId);
@@ -201,7 +221,7 @@ export async function  handleDeleteFile(ws, msg, s3Client, userId){
     }
 
     const dltFile = new DeleteObjectCommand({
-        Bucket: record.bucket,
+        Bucket: BUCKET,
         Key: record.s3Key
     });
     await s3Client.send(dltFile);

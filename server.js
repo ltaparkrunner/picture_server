@@ -15,7 +15,7 @@ import jwt from 'jsonwebtoken';
 
 import router from './httpAuth.js';
 import User from './model/User.js';
-import { handleGetUserBuckets, handleAddFile, handleListRequest, handleDeleteFile } from './auxHandler.js';
+import { handleGetUserBuckets, handleGetUserBucket, handleAddFile, handleListRequest, handleDeleteFile } from './auxHandler.js';
 
 import 'dotenv/config';
 
@@ -301,7 +301,7 @@ protobuf.load("image.proto", (err, root) => {
                     case ClientTypeValues.CLIENT_MESSAGE:
                         if(envelope.reqUserBuckets){
                             // console.log("Received bucket list request from user: ", req.user ? req.user.id : "Unknown");
-                            await handleGetUserBuckets(ws, envelope.reqUserBuckets, s3Client, req.user ? req.user.id : "Unknown");
+                            await handleGetUserBucket(ws, envelope.reqUserBuckets, s3Client, req.user ? req.user.id : "Unknown");
                         }                   //      envelope.content
                         if(envelope.addFile){
                             // async function handleAddFile(msg, root, s3Client, BaseMessage, ws)

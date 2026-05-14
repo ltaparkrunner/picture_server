@@ -86,8 +86,8 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Экспортируем роутер
-// module.exports = router;
+// router export
+
 export default router; 
 
 // 2. Логика в маршруте регистрации
