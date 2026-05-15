@@ -3,9 +3,20 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from './model/User.js';
+import { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, ListBucketsCommand, DeleteObjectCommand} from "@aws-sdk/client-s3";
 
 const router = express.Router();
 const USERS = process.env.USERS || 'users';
+const BUCKET = process.env.BUCKET_NAME || 'images';
+const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = process.env;
+
+const s3Client = new S3Client({
+    endpoint: S3_ENDPOINT,
+    region: "us-east-1", // Для MinIO любое значение
+    credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
+    forcePathStyle: true // Обязательно для MinIO
+});
+
 // 2. Маршрут РЕГИСТРАЦИИ
 router.post('/register', async (req, res) => {
     console.log("Received registration request: ", req.body);
@@ -26,15 +37,23 @@ router.post('/register', async (req, res) => {
         console.log("Before await newUser.save(); ", newUser.login);
         await newUser.save();
         const userId = newUser._id.toString();
-        const bucketExists = await minioClient.bucketExists(BUCKET_NAME);
-        if (!bucketExists) {
-            await minioClient.makeBucket(BUCKET_NAME);
+
+        //const bucketExists = await minioClient.bucketExists(BUCKET_NAME);
+        if (!bucketExists(BUCKET)) {
+            await createS3Bucket(BUCKET);
         }
         // 2. Create a "virtual folder" for the user.
         // In S3, we simply place an empty .placeholder file in the user's folder.
         //  const placeholderPath = `users/${userId}/.placeholder`;
         const placeholderPath = `${USERS}/${userId}/.placeholder`;
-        await minioClient.putObject(BUCKET_NAME, placeholderPath, "init");
+        //  await minioClient.putObject(BUCKET_NAME, placeholderPath, "init");
+        const command = new PutObjectCommand({
+            Bucket: BUCKET,
+            Key: placeholderPath,
+            Body: ""
+        });
+    
+        await s3Client.send(command);
         // Сразу создаем токен, чтобы пользователю не нужно было логиниться после регистрации
         console.log("process.env.JWT_SECRET: ", process.env.JWT_SECRET);
         console.log("process.env.JWT_EXPIRES_IN: ", process.env.JWT_EXPIRES_IN);
@@ -86,11 +105,50 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// router export
-
 export default router; 
 
-// 2. Логика в маршруте регистрации
+
+// 2. Логика в маршруте регистрацииconst 
+
+// client = new S3Client({ endpoint: S3_ENDPOINT,
+//                         region: "us-east-1",
+//                         credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
+//                         forcePathStyle: true
+//                      });
+
+async function bucketExists(bucketName) {
+    try {
+      const command = new HeadBucketCommand({ Bucket: bucketName });
+      await S3Client.send(command);
+      return true; // Bucket exists and you have access
+    } catch (error) {
+      if (error.name === "NotFound") {
+        return false; // Bucket does not exist
+      }
+      // Handle other errors (like 403 Forbidden) based on your needs
+      console.error("Error checking bucket:", error.name);
+      return false;
+    }
+}
+
+async function createS3Bucket(bucketName, region = "us-west-2") {
+    const input = {
+      Bucket: bucketName,
+      CreateBucketConfiguration: {
+        LocationConstraint: region,
+      },
+    };
+  
+    try {
+      const command = new CreateBucketCommand(input);
+      const response = await S3Client.send(command);
+      console.log(`Bucket created successfully at: ${response.Location}`);
+      return response;
+    } catch (error) {
+      console.error("Error creating bucket:", error.message);
+      throw error;
+    }
+  }
 
 // В S3 (Minio) папки не существуют как физические объекты — они создаются автоматически,
 //  когда вы загружаете файл по пути folder/file.dat. Поэтому при регистрации лучше всего

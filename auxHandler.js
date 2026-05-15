@@ -239,7 +239,7 @@ export async function  handleDeleteFile(ws, msg, s3Client, userId){
         }
     };
     sendEnvelope(ws, responsePayload);
-    console.log("Delete document off ", fname, " from ", bname);  
+    console.log("Delete document off ", fname, " from ", BUCKET);  
 }
 
 function prepareFilename(originalName) {
