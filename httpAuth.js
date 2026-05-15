@@ -72,9 +72,9 @@ router.post('/login', async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             console.log("Incorrect password for user: ", password);
-            const hashedPassword = await bcrypt.hash(password, 10);
-            console.log("Hashed version of incorrect password: ", hashedPassword, 
-                "  Stored hash: ", user.password);
+            // const hashedPassword = await bcrypt.hash(password, 10);
+            // console.log("Hashed version of incorrect password: ", hashedPassword, 
+            //     "  Stored hash: ", user.password);
             return res.status(401).json({ error: "Неверный пароль" });
         }
         console.log("Correct password: ", password);
