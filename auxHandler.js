@@ -92,7 +92,7 @@ function sendEnvelope(ws, payloadStructure) {
 export async function handleAddFile(ws, msg, s3Client, userId){
     const fileName = msg.fileName;
 
-    const folder = msg.folder;
+    const folderName = msg.folder;
     const info = msg.info;
     const img_data = Buffer.from(msg.data);
 
@@ -102,14 +102,17 @@ export async function handleAddFile(ws, msg, s3Client, userId){
     const usrLogin = user ? user.login : "Unknown";
 
     console.log(" fileName= ", fileName, " usrLogin = ", usrLogin,
-        " folder = ", folder, " info = ", info);
-    const safefolder = sanitize(folder).replace(/\s+/g, '-');
+        " folder = ", folderName, " info = ", info);
+
+    const userBasePath = `${USERS}/${userId}/`;
+    const targetFolder = folderName === "" 
+        ? userBasePath 
+        : `${userBasePath}${sanitize(folderName).replace(/^\/+|\/+$/g, '')}/`;
+    //const safefolder = sanitize(folder).replace(/\s+/g, '-');
     const {uniqueName, ext} = prepareFilename(fileName);
     console.log("process.env.USERS: ", process.env.USERS);
-    const s3Key = (safefolder) ?  `${USERS}/${userId}/${safefolder}/${uniqueName}` 
-                                : `${USERS}/${userId}/${uniqueName}`;
-
-    console.log("uniqueName:", uniqueName, " s3Key= ", s3Key);
+    const s3Key = `${targetFolder}${uniqueName}` 
+    console.log("uniqueName:", uniqueName, " s3Key= ", s3Key, " targetFolder: ", targetFolder, " ext: ", ext);
 
     const command = new PutObjectCommand({
         Bucket: BUCKET,
@@ -123,7 +126,7 @@ export async function handleAddFile(ws, msg, s3Client, userId){
     const meta = new ImageRecord({
         name: uniqueName,
         originalName: fileName,
-        folder: safefolder,
+        folder: targetFolder,
         s3Key: s3Key,
         bucket: BUCKET,
         userLogin: usrLogin,
@@ -146,23 +149,27 @@ export async function handleAddFile(ws, msg, s3Client, userId){
 }
 
 export async function handleListRequest(ws, msg, s3Client, userId){
-    const {/* bucketName, */ folderName, /* userLogin*/ } = msg; 
+    const {folderName} = msg; 
     console.log("   folderName", folderName); //,  "userLogin", userLogin);
 
-    // 1. We get REAL FILES in the current folder
+    const userBasePath = `${USERS}/${userId}/`;
+    const targetFolder = folderName === "" 
+        ? userBasePath 
+        : `${userBasePath}${sanitize(folderName).replace(/^\/+|\/+$/g, '')}/`;
+    console.log("targetFolder: ", targetFolder, "  BUCKET: ", BUCKET);
+    // 1. We get REAL FILES in the user's target folder
     const files = await ImageRecord.find({ 
         bucket: BUCKET, 
-        folder: folderName 
+        folder: targetFolder 
     }).lean();
-
-    // 2. Finding VIRTUAL SUB-FOLDERS through aggregation
-    const prefix = folderName === "" ? "" : (folderName.endsWith('/') ? folderName : folderName + '/');
-
+    console.log("Real files in folder: ", files);
+    // 2. Finding VIRTUAL user's SUB-FOLDERS through aggregation
+    
     const folders = await ImageRecord.aggregate([
-        { $match: { bucket: BUCKET, folder: new RegExp(`^${prefix}[^/]+`) } },
+        { $match: { bucket: BUCKET, folder: new RegExp(`^${targetFolder}[^/]+`) } },
         { $project: { 
             // Cut off the current prefix and take only the next path segment
-            relativeFolder: { $substr: ["$folder", prefix.length, -1] } 
+            relativeFolder: { $substr: ["$folder", targetFolder.length, -1] } 
         }},
         { $project: {
             folderNm: { $arrayElemAt: [{ $split: ["$relativeFolder", "/"] }, 0] }
@@ -170,7 +177,7 @@ export async function handleListRequest(ws, msg, s3Client, userId){
         { $group: { _id: "$folderNm" } } // Group to get unique names
     ]);
     console.log("Real folders in folder: ", folders);
-    const foldersval = folders.map(({ _id }) => _id);
+    //  const foldersval = folders.map(({ _id }) => _id);
     const minioPath = "http://minio:9000/" + BUCKET + "/";
     const filesPayload = await Promise.all(files.map(async (file) => {
         // Generate a temporary link directly to Minio
@@ -179,7 +186,8 @@ export async function handleListRequest(ws, msg, s3Client, userId){
             Key: file.s3Key
         });
         // The link will be valid for, for example, 1 hour (3600 seconds)
-        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: process.env.S3_REF_EXPIRES || 3600 });
+        const signedUrl = await getSignedUrl(s3Client, command, { 
+            expiresIn: process.env.S3_REF_EXPIRES || 3600 });
 
         return {
             fileName: file.originalName,
@@ -191,7 +199,7 @@ export async function handleListRequest(ws, msg, s3Client, userId){
     // 3. Preparing an array of folders for Protobuf
     const foldersPayload = Array.from(folders).map(folderNm => ({
         folderName: folderNm._id,
-        url: minioPath + folderName + folderNm._id + "/"
+        url: `${minioPath}${targetFolder}${folderNm._id}/`
     }));
     console.log("Prepared folders payload: ", foldersPayload);
     const responsePayload = {

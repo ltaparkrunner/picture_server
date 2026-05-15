@@ -217,3 +217,82 @@ async function handleUpload(userId, bucket, folderPath, fileName) {
 
 separate folder in separated folder field.
  put extension to info field
+
+
+ export async function handleListRequest(ws, msg, s3Client, userId) {
+    const { folderName } = msg; 
+    console.log("   folderName", folderName);
+
+    // Строим изолированный базовый путь для конкретного пользователя
+    // Пример: "users/123/"
+    const userBasePath = `${USERS}/${userId}/`;
+
+    // Формируем полный целевой путь внутри папки пользователя.
+    // Если folderName пустая, берем корень пользователя. Если нет — убираем ведущие/ведомые слэши и склеиваем.
+    const targetFolder = folderName === "" 
+        ? userBasePath 
+        : `${userBasePath}${folderName.replace(/^\/+|\/+$/g, '')}/`;
+
+    // 1. Получаем РЕАЛЬНЫЕ ФАЙЛЫ строго из целевой папки пользователя
+    const files = await ImageRecord.find({ 
+        bucket: BUCKET, 
+        folder: targetFolder 
+    }).lean();
+
+    // 2. Поиск ВИРТУАЛЬНЫХ ПОДПАПОК пользователя через агрегацию
+    // Ищем только папки, которые начинаются с targetFolder
+    const folders = await ImageRecord.aggregate([
+        { $match: { bucket: BUCKET, folder: new RegExp(`^${targetFolder}[^/]+`) } },
+        { 
+            $project: { 
+                // Отрезаем targetFolder, чтобы получить только имя подпапки
+                relativeFolder: { $substr: ["$folder", targetFolder.length, -1] } 
+            }
+        },
+        { 
+            $project: {
+                folderNm: { $arrayElemAt: [{ $split: ["$relativeFolder", "/"] }, 0] }
+            }
+        },
+        { $group: { _id: "$folderNm" } } 
+    ]);
+    
+    console.log("Real folders in folder: ", folders);
+    const minioPath = "http://minio:9000/" + BUCKET + "/";
+
+    const filesPayload = await Promise.all(files.map(async (file) => {
+        const command = new GetObjectCommand({
+            Bucket: BUCKET,
+            Key: file.s3Key
+        });
+        const signedUrl = await getSignedUrl(s3Client, command, { 
+            expiresIn: process.env.S3_REF_EXPIRES || 3600 
+        });
+
+        return {
+            fileName: file.originalName,
+            mongoId: file._id.toString(),
+            url: signedUrl,
+            size: file.size || 0
+        };
+    }));
+
+    // 3. Подготовка папок для Protobuf
+    const foldersPayload = Array.from(folders).map(folderNm => ({
+        folderName: folderNm._id,
+        // Ссылка ведет на виртуальный путь относительно корня бакета
+        url: `${minioPath}${targetFolder}${folderNm._id}/`
+    }));
+
+    console.log("Prepared folders payload: ", foldersPayload);
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        listResponse: {
+            files: filesPayload,
+            folders: foldersPayload
+        }
+    };
+    
+    console.log("Final response payload: ", responsePayload);
+    sendEnvelope(ws, responsePayload);
+}
