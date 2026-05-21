@@ -15,7 +15,7 @@ import jwt from 'jsonwebtoken';
 
 import router from './httpAuth.js';
 import User from './model/User.js';
-import { handleGetUserBuckets, handleGetUserBucket, handleAddFile, handleListRequest, handleDeleteFile } from './auxHandler.js';
+import { handleGetUserBuckets, handleGetUserBucket, handleAddFile, handleListRequest, handleDeleteFile, handlefilesIdsRequest } from './auxHandler.js';
 
 import 'dotenv/config';
 
@@ -274,6 +274,10 @@ protobuf.load("image.proto", (err, root) => {
                         }
                         if(envelope.deleteFile){
                             await handleDeleteFile(ws, envelope.deleteFile, s3Client, req.user.id);
+                        }
+                        if(envelope.filesIdsRequest){
+                            // console.log("Received filesIdsRequest from user: ", req.user ? req.user.id : "Unknown");
+                            await handlefilesIdsRequest(ws, envelope.filesIdsRequest, s3Client, req.user.id);
                         }
                         console.log(`User ${user.login} is authorized to see files`);
                         // Проверяем, пришел ли запрос на регистрацию

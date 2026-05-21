@@ -250,6 +250,44 @@ export async function  handleDeleteFile(ws, msg, s3Client, userId){
     console.log("Delete document off ", fname, " from ", BUCKET);  
 }
 
+export async function handlefilesIdsRequest(ws, msg, s3Client, userId){
+    const ids = msg.mongoIds; // Array of MongoDB IDs
+    const filesPayload = await Promise.all(ids.map(async (id) => {
+        console.log("Processing ID: ", id);
+        const record = await ImageRecord.findById(id);
+        if (record) {
+            const command = new GetObjectCommand({
+                Bucket: BUCKET,
+                Key: record.s3Key
+            });
+            const signedUrl = await getSignedUrl(s3Client, command, { 
+                expiresIn: process.env.S3_REF_EXPIRES || 360 
+            });
+            return {
+                    fileName: record.originalName,
+                    mongoId: record._id.toString(),
+                    url: signedUrl,
+                    size: record.size || 0
+                }
+        }   else {              
+            console.log(`Record with ID ${id} not found in MongoDB`);   
+                return{
+                    fileName: "",
+                    mongoId: id.toString(),
+                    url: "",
+                    size: 0
+                }          
+        } 
+    }));
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        filesIdsResponse: {
+            files: filesPayload // This will be filled with file info objects
+        }
+    };
+    sendEnvelope(ws, responsePayload);      
+}
+
 function prepareFilename(originalName) {
     const ext = path.extname(originalName);
     const nameOnly = path.basename(originalName, ext);

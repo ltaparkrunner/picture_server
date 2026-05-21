@@ -33,6 +33,10 @@ message ServerResponse{ // to AddFileFolderRequest
   string status = 2; 
 }
 
+message FilesIds{
+    repeated string mongoIds = 1;
+}
+
 message FilesFoldersListRequest {
 //  string bucketName = 1;
   string folderName = 1;
@@ -145,18 +149,19 @@ message ClientEnvelope {
     CLIENT_MESSAGE = 2;
   }
   Type type = 1;
-  string token = 12;
+  string token = 14;
   oneof content {
     AddFileRequest addFile = 2;
     AddFolderRequest addFolder = 3;
     FilesFoldersListRequest listRequest = 4;
     FilesOnlyListRequest filesListRequest = 5;
-    BucketsRequest reqUserBuckets = 6;
-    DeleteFileRequest deleteFile = 7;
-    DeleteFolderRequest deleteFolder = 8;
-    DeleteBucketRequest deleteBucket = 9;
-    RegisterRequest regRequest = 10;
-    AuthRequest authRequest = 11;
+    FilesIds filesIdsRequest = 6;
+    BucketsRequest reqUserBuckets = 8;
+    DeleteFileRequest deleteFile = 9;
+    DeleteFolderRequest deleteFolder = 10;
+    DeleteBucketRequest deleteBucket = 11;
+    RegisterRequest regRequest = 12;
+    AuthRequest authRequest = 13;
   }
 }
 
@@ -177,5 +182,6 @@ message ServerEnvelope {
     BucketInfo bucketInfo = 7;
     BucketsList buckets = 8;
     AuthResponse authResponse = 9;
+    FilesOnlyListResponse filesIdsResponse = 10;
   }
 }
