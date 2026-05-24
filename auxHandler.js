@@ -26,7 +26,7 @@ export async function handleGetUserBuckets(ws, msg, s3Client, user){
 
     const bucketInfo = response.Buckets.map(bucket => {
         return {bucketName: bucket.Name, 
-            url: `${config.protocol}//${config.hostname}:${config.port}/${bucket.Name}`};
+            url: `${config.protocol}//${config.hostname}:${config.port}/${bucket.Name}/`};
     });
     //  console.log(" bucketInfo: ", bucketInfo)//, names2)
     //  const bucketUrl = `${s3Client.protocol}//${s3Client.host}:${s3Client.port}/${bucketName}`;
@@ -107,7 +107,8 @@ export async function handleAddFile(ws, msg, s3Client, userId){
     const userBasePath = `${USERS}/${userId}/`;
     const targetFolder = folderName === "" 
         ? userBasePath 
-        : `${userBasePath}${sanitize(folderName).replace(/^\/+|\/+$/g, '')}/`;
+//        : `${userBasePath}${sanitize(folderName).replace(/^\/+|\/+$/g, '')}/`;
+        : `${userBasePath}${sanitizeToPath(folderName)}/`;
     //const safefolder = sanitize(folder).replace(/\s+/g, '-');
     const {uniqueName, ext} = prepareFilename(fileName);
     console.log("process.env.USERS: ", process.env.USERS);
@@ -150,7 +151,7 @@ export async function handleAddFile(ws, msg, s3Client, userId){
 
 export async function handleListRequest(ws, msg, s3Client, userId){
     const {folderName} = msg; 
-    console.log("   folderName", folderName); //,  "userLogin", userLogin);
+    console.log(" function handleListRequest  folderName", folderName); //,  "userLogin", userLogin);
 
     const userBasePath = `${USERS}/${userId}/`;
     const targetFolder = folderName === "" 
@@ -162,9 +163,14 @@ export async function handleListRequest(ws, msg, s3Client, userId){
         bucket: BUCKET, 
         folder: targetFolder 
     }).lean();
-    console.log("Real files in folder: ", files);
+    console.log("Real files in folder: ", files, " targetFolder: ", targetFolder);
     // 2. Finding VIRTUAL user's SUB-FOLDERS through aggregation
-    
+    const files2 = await ImageRecord.find({ 
+        bucket: BUCKET, 
+        folder: folderName + "/"
+    }).lean();
+    console.log("Real files in folder: ", files2, " folderName: ", folderName);
+
     const folders = await ImageRecord.aggregate([
         { $match: { bucket: BUCKET, folder: new RegExp(`^${targetFolder}[^/]+`) } },
         { $project: { 
@@ -298,3 +304,21 @@ function prepareFilename(originalName) {
     console.log("finalFilename: ", uniqueName, "  ext: ", ext);
     return {uniqueName, ext};
 }
+
+function sanitizeToPath(input) {
+    // 1. Replace backslashes with forward slashes
+    let path = input.replace(/\\/g, '/');
+    
+    // 2. Collapse multiple slashes into a single slash
+    path = path.replace(/\/+/g, '/');
+    
+    // 3. Trim leading and trailing slashes
+    path = path.replace(/^\/+|\/+$/g, '');
+    
+    // 4. Sanitize each individual segment to protect the filesystem
+    return path
+      .split('/')
+      .map(segment => sanitize(segment))
+      .filter(segment => segment.length > 0) // Remove any empty segments created by sanitization
+      .join('/');
+  }

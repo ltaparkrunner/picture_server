@@ -126,112 +126,112 @@ protobuf.load("image.proto", (err, root) => {
         console.log('Secure Qt Client connected via WSS: ', req.user);
 
         ws.on('message', async (message) => {
-            try {
-                // Decoding Protobuf message
-                console.log("Received message of type: ", typeof message, " and length: ", message.length);
-                console.log("User: ", User, " and length: ", message.length);
-                const BaseMessage = root.lookupType("BaseMessage");
-                const msg = BaseMessage.decode(message);
+//             try {
+//                 // Decoding Protobuf message
+//                 console.log("Received message of type: ", typeof message, " and length: ", message.length);
+//                 console.log("User: ", User, " and length: ", message.length);
+//                 const BaseMessage = root.lookupType("BaseMessage");
+//                 const msg = BaseMessage.decode(message);
 
-                const user = await User.findOne({ _id: req.user.id });
-                const emaillogin = user ? user.login : "Unknown";
-                console.log("Decoded Protobuf message content: ", msg.content, " from user: ", emaillogin); 
+//                 const user = await User.findOne({ _id: req.user.id });
+//                 const emaillogin = user ? user.login : "Unknown";
+//                 console.log("Decoded Protobuf message content: ", msg.content, " from user: ", emaillogin); 
                 
-                if(msg.content === "pict"){
-                    const objName = msg.pict.filename;
-                    const img_data = Buffer.from(msg.pict.data);
-                    console.log("Buffer size:", img_data.length);
-                    const filename = msg.pict.fileName;
-//                    const userId = msg.pict.userLogin;
-//                    const bucket = msg.pict.bucketName
+//                 if(msg.content === "pict"){
+//                     const objName = msg.pict.filename;
+//                     const img_data = Buffer.from(msg.pict.data);
+//                     console.log("Buffer size:", img_data.length);
+//                     const filename = msg.pict.fileName;
+// //                    const userId = msg.pict.userLogin;
+// //                    const bucket = msg.pict.bucketName
 
-                    console.log(" Why is it here? userId = ", userId, " filename= ", filename, "  contentType= ", msg.pict.contenttype,
-                        "   images= ", msg.pict.data
-                    );
+//                     console.log(" Why is it here? userId = ", userId, " filename= ", filename, "  contentType= ", msg.pict.contenttype,
+//                         "   images= ", msg.pict.data
+//                     );
 
-                    // Сохранение в Minio
-                    const objectName = `${Date.now()}_${filename}`;
-                    const command = new PutObjectCommand({
-                        Bucket: BUCKET,
-                        Key: objName,
-                        Body: img_data
-                    });
-                    await s3Client.send(command);
+//                     // Сохранение в Minio
+//                     const objectName = `${Date.now()}_${filename}`;
+//                     const command = new PutObjectCommand({
+//                         Bucket: BUCKET,
+//                         Key: objName,
+//                         Body: img_data
+//                     });
+//                     await s3Client.send(command);
 
-                    // Сохранение метаданных в MongoDB
-                    const meta = new ImageRecord({
-                        filename,
-                        userLogin: userId,//user_id,
-                        minioObjectName: objectName
-                    });
-                    await meta.save();
+//                     // Сохранение метаданных в MongoDB
+//                     const meta = new ImageRecord({
+//                         filename,
+//                         userLogin: userId,//user_id,
+//                         minioObjectName: objectName
+//                     });
+//                     await meta.save();
 
-                    console.log(`Saved image ${filename} for user ${emaillogin}`);
-                    ws.send("Upload successful");
-                }
-                if(msg.content === 'listRequest2') {
-                    const bucketName = msg.listRequest.bucketName;
-                    //const bucketName = 'images';
-                    console.log("msg.listRequest.count = ", msg.listRequest.count, "msg.listRequest.bucketName = ", msg.listRequest.bucketName);
-                    const command = new ListObjectsV2Command({
-                        Bucket: BUCKET,
-                        MaxKeys: msg.listRequest.count // В нашем случае 6
-                    });
+//                     console.log(`Saved image ${filename} for user ${emaillogin}`);
+//                     ws.send("Upload successful");
+//                 }
+//                 if(msg.content === 'listRequest2') {
+//                     const bucketName = msg.listRequest.bucketName;
+//                     //const bucketName = 'images';
+//                     console.log("msg.listRequest.count = ", msg.listRequest.count, "msg.listRequest.bucketName = ", msg.listRequest.bucketName);
+//                     const command = new ListObjectsV2Command({
+//                         Bucket: BUCKET,
+//                         MaxKeys: msg.listRequest.count // В нашем случае 6
+//                     });
 
-                    const { Contents } = await s3Client.send(command);
-                    const imageInfos = await Promise.all((Contents || []).map(async (file) => {
-                        const getCommand = new GetObjectCommand({ Bucket: bucketName, Key: file.Key });
-                        const url = await getSignedUrl(s3Client, getCommand, { expiresIn: process.env.S3_REF_EXPIRES || 3600 });
-                        return { fileName: file.Key, url: url };
-                    }));
-                    //  console.log("imageInfos = ", imageInfos);
+//                     const { Contents } = await s3Client.send(command);
+//                     const imageInfos = await Promise.all((Contents || []).map(async (file) => {
+//                         const getCommand = new GetObjectCommand({ Bucket: bucketName, Key: file.Key });
+//                         const url = await getSignedUrl(s3Client, getCommand, { expiresIn: process.env.S3_REF_EXPIRES || 3600 });
+//                         return { fileName: file.Key, url: url };
+//                     }));
+//                     //  console.log("imageInfos = ", imageInfos);
 
-                    const responsePayload = BaseMessage.create({
-                        listResponse: { files: imageInfos, folders: {} }
-                    });
-                    console.log("responsePayload = ", responsePayload);
-                    ws.send(BaseMessage.encode(responsePayload).finish());
-                }
-                if(msg.content === "reqUserBuckets"){
-                    const listBuckets = new ListBucketsCommand({})
-                    const response = await s3Client.send(listBuckets);
-                    //  console.log(response.Buckets)
-                    const config = await s3Client.config.endpoint();
+//                     const responsePayload = BaseMessage.create({
+//                         listResponse: { files: imageInfos, folders: {} }
+//                     });
+//                     console.log("responsePayload = ", responsePayload);
+//                     ws.send(BaseMessage.encode(responsePayload).finish());
+//                 }
+//                 if(msg.content === "reqUserBuckets"){
+//                     const listBuckets = new ListBucketsCommand({})
+//                     const response = await s3Client.send(listBuckets);
+//                     //  console.log(response.Buckets)
+//                     const config = await s3Client.config.endpoint();
 
-                    const bucketInfo = response.Buckets.map(bucket => {
-                        return {bucketName: bucket.Name, 
-                            url: `${config.protocol}//${config.hostname}:${config.port}/${bucket.Name}`};
-                    });
-                    //  console.log(" bucketInfo: ", bucketInfo)//, names2)
-                    //  const bucketUrl = `${s3Client.protocol}//${s3Client.host}:${s3Client.port}/${bucketName}`;
-                    const responsePayload = BaseMessage.create({
-                        buckets: { bucketInf: bucketInfo }
-                    });
-                    ws.send(BaseMessage.encode(responsePayload).finish());
-                }
-                if(msg.content === "deleteFile2"){
-                    await handleDeleteFile(msg, root, s3Client, BaseMessage, ws);
-                }
-                // if(msg.content === "addFile"){
-                //     await handleAddFile(msg, root, s3Client, BaseMessage, ws);
-                // }
-                if(msg.content === "listRequest4") {
+//                     const bucketInfo = response.Buckets.map(bucket => {
+//                         return {bucketName: bucket.Name, 
+//                             url: `${config.protocol}//${config.hostname}:${config.port}/${bucket.Name}`};
+//                     });
+//                     //  console.log(" bucketInfo: ", bucketInfo)//, names2)
+//                     //  const bucketUrl = `${s3Client.protocol}//${s3Client.host}:${s3Client.port}/${bucketName}`;
+//                     const responsePayload = BaseMessage.create({
+//                         buckets: { bucketInf: bucketInfo }
+//                     });
+//                     ws.send(BaseMessage.encode(responsePayload).finish());
+//                 }
+//                 if(msg.content === "deleteFile2"){
+//                     await handleDeleteFile(msg, root, s3Client, BaseMessage, ws);
+//                 }
+//                 // if(msg.content === "addFile"){
+//                 //     await handleAddFile(msg, root, s3Client, BaseMessage, ws);
+//                 // }
+//                 if(msg.content === "listRequest4") {
 
-                    await handleGetFolderContent(msg, s3Client, BaseMessage, ws);
-                    // await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
-                }
-                if(msg.content === "filesListRequest3") {
-                    await handleGetFolderOnlyFilesContent(msg, s3Client, BaseMessage, ws);
-                    // await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
-                }
-                if(msg.content === "deleteBucket") {
-                    console.log("deleteBucket");
-                    const bucket = msg.deleteBucket.bucketName;
-                    await ImageRecord.deleteMany({});
-                }
-            } catch (e) {
-                console.error("Error processing message:", e);
-            }
+//                     await handleGetFolderContent(msg, s3Client, BaseMessage, ws);
+//                     // await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
+//                 }
+//                 if(msg.content === "filesListRequest3") {
+//                     await handleGetFolderOnlyFilesContent(msg, s3Client, BaseMessage, ws);
+//                     // await handleViewFolder(msg, root, s3Client, BaseMessage, ws)
+//                 }
+//                 if(msg.content === "deleteBucket") {
+//                     console.log("deleteBucket");
+//                     const bucket = msg.deleteBucket.bucketName;
+//                     await ImageRecord.deleteMany({});
+//                 }
+//             } catch (e) {
+//                 console.error("Error processing message:", e);
+//             }
             try {
                 // Декодируем входящий ClientEnvelope из сырых байт
                 const ClientEnvelope = root.lookupType('ClientEnvelope');
