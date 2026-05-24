@@ -156,7 +156,8 @@ export async function handleListRequest(ws, msg, s3Client, userId){
     const userBasePath = `${USERS}/${userId}/`;
     const targetFolder = folderName === "" 
         ? userBasePath 
-        : `${userBasePath}${sanitize(folderName).replace(/^\/+|\/+$/g, '')}/`;
+//        : `${userBasePath}${sanitize(folderName).replace(/^\/+|\/+$/g, '')}/`;
+        : `${userBasePath}${sanitizeToPath(folderName)}/`;
     console.log("targetFolder: ", targetFolder, "  BUCKET: ", BUCKET);
     // 1. We get REAL FILES in the user's target folder
     const files = await ImageRecord.find({ 
@@ -182,6 +183,7 @@ export async function handleListRequest(ws, msg, s3Client, userId){
         }},
         { $group: { _id: "$folderNm" } } // Group to get unique names
     ]);
+    //console.log("targetFolder: ", targetFolder);
     console.log("Real folders in folder: ", folders);
     //  const foldersval = folders.map(({ _id }) => _id);
     const minioPath = "http://minio:9000/" + BUCKET + "/";
@@ -204,7 +206,7 @@ export async function handleListRequest(ws, msg, s3Client, userId){
     }));
     // 3. Preparing an array of folders for Protobuf
     const foldersPayload = Array.from(folders).map(folderNm => ({
-        folderName: folderNm._id,
+        folderName: folderName===""?folderNm._id:`${folderName}/${folderNm._id}`,
         url: `${minioPath}${targetFolder}${folderNm._id}/`
     }));
     console.log("Prepared folders payload: ", foldersPayload);
