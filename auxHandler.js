@@ -156,7 +156,6 @@ export async function handleListRequest(ws, msg, s3Client, userId){
     const userBasePath = `${USERS}/${userId}/`;
     const targetFolder = folderName === "" 
         ? userBasePath 
-//        : `${userBasePath}${sanitize(folderName).replace(/^\/+|\/+$/g, '')}/`;
         : `${userBasePath}${sanitizeToPath(folderName)}/`;
     console.log("targetFolder: ", targetFolder, "  BUCKET: ", BUCKET);
     // 1. We get REAL FILES in the user's target folder
@@ -166,12 +165,6 @@ export async function handleListRequest(ws, msg, s3Client, userId){
     }).lean();
     console.log("Real files in folder: ", files, " targetFolder: ", targetFolder);
     // 2. Finding VIRTUAL user's SUB-FOLDERS through aggregation
-    const files2 = await ImageRecord.find({ 
-        bucket: BUCKET, 
-        folder: folderName + "/"
-    }).lean();
-    console.log("Real files in folder: ", files2, " folderName: ", folderName);
-
     const folders = await ImageRecord.aggregate([
         { $match: { bucket: BUCKET, folder: new RegExp(`^${targetFolder}[^/]+`) } },
         { $project: { 
@@ -206,7 +199,7 @@ export async function handleListRequest(ws, msg, s3Client, userId){
     }));
     // 3. Preparing an array of folders for Protobuf
     const foldersPayload = Array.from(folders).map(folderNm => ({
-        folderName: folderName===""?folderNm._id:`${folderName}/${folderNm._id}`,
+        folderName: folderNm._id,
         url: `${minioPath}${targetFolder}${folderNm._id}/`
     }));
     console.log("Prepared folders payload: ", foldersPayload);
