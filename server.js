@@ -173,6 +173,10 @@ protobuf.load("image.proto", (err, root) => {
                             // console.log("Received filesIdsRequest from user: ", req.user ? req.user.id : "Unknown");
                             await handlefilesIdsRequest(ws, envelope.filesIdsRequest, s3Client, req.user.id);
                         }
+                        if(envelope.pathInfRequest){
+                            // console.log("Received infoByNetPathRequest from user: ", req.user ? req.user.id : "Unknown");
+                            await handlePathInfRequest(ws, envelope.infoByNetPathRequest, s3Client, req.user.id);
+                        }
                         console.log(`User ${user.login} is authorized to see files`);
                         // Проверяем, пришел ли запрос на регистрацию
                         console.log('Other CLIENT_MESSAGE content received:', envelope.content);

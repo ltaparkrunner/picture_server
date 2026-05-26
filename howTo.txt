@@ -1,3 +1,6 @@
+When add smth forbid to create folders as files, and add files the same names as 
+folders.
+
 I have config variable configvar USERS, it is used in httpAuth.js, and in auxHandlers.js
 process.env.JWT_SECRET
 process.env.JWT_EXPIRES_IN

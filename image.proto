@@ -56,6 +56,16 @@ message FileInfo {
   int64 size = 4;
 }
 
+message PathInfoRequest {
+    string path = 1;
+}
+
+message PathInfoResponse {
+    string path = 1;
+    string netStorePath = 2;
+    string result = 3;
+}
+
 message FolderInfo {
   string folderName = 1;
   string url = 2;
@@ -156,6 +166,7 @@ message ClientEnvelope {
     FilesFoldersListRequest listRequest = 4;
     FilesOnlyListRequest filesListRequest = 5;
     FilesIds filesIdsRequest = 6;
+    PathInfoRequest pathInfRequest = 7;
     BucketsRequest reqUserBuckets = 8;
     DeleteFileRequest deleteFile = 9;
     DeleteFolderRequest deleteFolder = 10;
@@ -183,5 +194,6 @@ message ServerEnvelope {
     BucketsList buckets = 8;
     AuthResponse authResponse = 9;
     FilesOnlyListResponse filesIdsResponse = 10;
+    PathInfoResponse pathInfResponse = 11;
   }
 }
