@@ -290,11 +290,12 @@ export async function handlefilesIdsRequest(ws, msg, s3Client, userId){
 }
 
 export async function handlePathInfRequest(ws, msg, s3Client, userId){
+    console.log("handlePathInfRequest  msg.netPath: ", msg.netPath, " userId: ", userId);
     const prefix = `${USERS}/${userId}/`;
-    inputPath = msg.netPath;
+    const inputPath = msg.netPath;
     console.log("handlePathInfRequest  inputPath: ", inputPath, " prefix: ", prefix);
     // 1. Ensure the path starts with the required prefix
-    let formattedPath = inputPath;
+    let formattedPath = msg.netPath;
 //    if (!formattedPath.includes(prefix)) {
     if (!formattedPath.startsWith(prefix)) {
         formattedPath = prefix + formattedPath;
@@ -304,24 +305,25 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
     // Если путь заканчивается на '/', это может быть ТОЛЬКО папка
     if (isExplicitFolder) {
         const query = { folder: { $regex: `^${escapeRegex(formattedPath)}` } };
-        const doc = await db.collection('assets').findOne(query, { projection: { _id: 1 } });
+        const doc = await ImageRecord.findOne(query, { projection: { _id: 1 } });
         if(doc) {
+        //     const responsePayload = {
+        //         type: ServerTypeValues.SERVER_MESSAGE,
+        //         pathInfResponse: {         
+        //             netPath: escapeRegex(formattedPath),
+        //             netStorePath: "",
+        //             result: "folder"
+        //         }
+        //     };
+        //     sendEnvelope(ws, responsePayload);
+        await handleListRequest(ws, {folderName: inputPath}/*inputPath formattedPathor msg*/, s3Client, userId)
+        return
+    } else {
             const responsePayload = {
                 type: ServerTypeValues.SERVER_MESSAGE,
-                pathInfResponse: {         
-                    netPath: escapeRegex(formattedPath),
-                    netStorePath: "",
-                    result: "folder"
-                }
-            };
-            sendEnvelope(ws, responsePayload);
-        } else {
-            const responsePayload = {
-                type: ServerTypeValues.SERVER_MESSAGE,
-                pathInfResponse: {         
-                    netPath: escapeRegex(formattedPath),
-                    netStorePath: "",
-                    result: "not_exist"
+                serverResp: { 
+                    content: "The path does not exist" + formattedPath,
+                    status: "error"
                 }
             };
             sendEnvelope(ws, responsePayload);
@@ -330,18 +332,10 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
     }
     const folderWithSlash = `${formattedPath}/`;
     const folderQuery = { folder: { $regex: `^${escapeRegex(folderWithSlash)}` } };
-    const folderDoc = await db.collection('assets').findOne(folderQuery, { projection: { _id: 1 } });
+    const folderDoc = await ImageRecord.findOne(folderQuery, { projection: { _id: 1 } });
     if (folderDoc){
-        const responsePayload = {
-            type: ServerTypeValues.SERVER_MESSAGE,
-            pathInfResponse: {         
-                netPath: escapeRegex(formattedPath),
-                netStorePath: "",
-                result: "folder"
-            }
-        };
-        sendEnvelope(ws, responsePayload);
-        return;
+        await handleListRequest(ws, {folderName: inputPath}/*inputPath or msg*/, s3Client, userId) 
+        return
     }
 
     const fileQuery = {
@@ -357,35 +351,36 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
             }
         ]
     };
-    const fileDoc = await db.collection('assets').findOne(fileQuery, { projection: { _id: 1 } });
+    const fileDoc = await ImageRecord.findOne(fileQuery, { projection: { _id: 1 } });
     
     if (fileDoc) {
         const command = new GetObjectCommand({
             Bucket: BUCKET,
-            Key: fileDoc.s3Key
+            Key: record.s3Key
         });
-        // The link will be valid for, for example, 1 hour (3600 seconds)
         const signedUrl = await getSignedUrl(s3Client, command, { 
-            expiresIn: process.env.S3_REF_EXPIRES || 3600 });
-
+            expiresIn: process.env.S3_REF_EXPIRES || 360 
+        });
         const responsePayload = {
             type: ServerTypeValues.SERVER_MESSAGE,
-            pathInfResponse: {         
-                netPath: escapeRegex(formattedPath),
-                netStorePath: signedUrl,
-                result: "file"
+            filesIdsResponse: {
+                files: {
+                    fileName: fileDoc.originalName,
+                    mongoId: fileDoc._id.toString(),
+                    url: signedUrl,
+                    size: fileDoc.size || 0     
+                } // This will be filled with file info objects
             }
         };
         sendEnvelope(ws, responsePayload);
-        return; 
+        return;
     }
 
     const responsePayload = {
         type: ServerTypeValues.SERVER_MESSAGE,
-        pathInfResponse: {         
-            netPath: escapeRegex(formattedPath),
-            netStorePath: "",
-            result: "not_exist"
+        serverResp: { 
+            content: "The path does not exist" + formattedPath,
+            status: "error"
         }
     };
     sendEnvelope(ws, responsePayload);

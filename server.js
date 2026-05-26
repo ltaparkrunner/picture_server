@@ -15,7 +15,7 @@ import jwt from 'jsonwebtoken';
 
 import router from './httpAuth.js';
 import User from './model/User.js';
-import { handleGetUserBuckets, handleGetUserBucket, handleAddFile, handleListRequest, handleDeleteFile, handlefilesIdsRequest } from './auxHandler.js';
+import { handleGetUserBuckets, handleGetUserBucket, handleAddFile, handleListRequest, handleDeleteFile, handlefilesIdsRequest, handlePathInfRequest } from './auxHandler.js';
 
 import 'dotenv/config';
 
@@ -175,7 +175,7 @@ protobuf.load("image.proto", (err, root) => {
                         }
                         if(envelope.pathInfRequest){
                             // console.log("Received infoByNetPathRequest from user: ", req.user ? req.user.id : "Unknown");
-                            await handlePathInfRequest(ws, envelope.infoByNetPathRequest, s3Client, req.user.id);
+                            await handlePathInfRequest(ws, envelope.pathInfRequest, s3Client, req.user.id);
                         }
                         console.log(`User ${user.login} is authorized to see files`);
                         // Проверяем, пришел ли запрос на регистрацию
@@ -188,7 +188,7 @@ protobuf.load("image.proto", (err, root) => {
                 }
             } catch (error) {
                 console.error('Failed to process incoming message:', error);
-                sendAuthError(ws, 'Internal server error processing payload.');
+                sendAuthError(ws, 'Internal server error processing payload.'); //TODO
             }
         });
     });

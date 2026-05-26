@@ -57,11 +57,11 @@ message FileInfo {
 }
 
 message PathInfoRequest {
-    string path = 1;
+    string netPath = 1;
 }
 
 message PathInfoResponse {
-    string path = 1;
+    string netPath = 1;
     string netStorePath = 2;
     string result = 3;
 }
