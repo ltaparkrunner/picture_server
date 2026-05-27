@@ -16,6 +16,7 @@ const ServerEnvelope = root.lookupType('ServerEnvelope');
 const ServerTypeValues = ServerEnvelope.nested.Type.values;
 const USERS = process.env.USERS || 'users';
 const BUCKET = process.env.BUCKET_NAME || 'images';
+const S3_ENDPOINT = process.S3_ENDPOINT || 'http://minio:9000/'
 //  console.log("process.env.USERS: ", process.env.USERS);
 
 export async function handleGetUserBuckets(ws, msg, s3Client, user){
@@ -151,7 +152,7 @@ export async function handleAddFile(ws, msg, s3Client, userId){
 
 export async function handleListRequest(ws, msg, s3Client, userId){
     const {folderName} = msg; 
-    console.log(" function handleListRequest  folderName", folderName); //,  "userLogin", userLogin);
+    console.log("function handleListRequest folderName", folderName); //,  "userLogin", userLogin);
 
     const userBasePath = `${USERS}/${userId}/`;
     const targetFolder = folderName === "" 
@@ -293,36 +294,40 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
     console.log("handlePathInfRequest  msg.netPath: ", msg.netPath, " userId: ", userId);
     const prefix = `${USERS}/${userId}/`;
     const inputPath = msg.netPath;
-    console.log("handlePathInfRequest  inputPath: ", inputPath, " prefix: ", prefix);
+
     // 1. Ensure the path starts with the required prefix
     let formattedPath = msg.netPath;
 //    if (!formattedPath.includes(prefix)) {
     if (!formattedPath.startsWith(prefix)) {
         formattedPath = prefix + formattedPath;
     }
+
     const isExplicitFolder = formattedPath.endsWith('/');
     const escapeRegex = (str) => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     // Если путь заканчивается на '/', это может быть ТОЛЬКО папка
     if (isExplicitFolder) {
-        const query = { folder: { $regex: `^${escapeRegex(formattedPath)}` } };
+//        const query = { folder: { $regex: `^${escapeRegex(formattedPath)}` } };
+        const query = { folder: { $regex: `^${sanitizeToPath(formattedPath)}` } };
         const doc = await ImageRecord.findOne(query, { projection: { _id: 1 } });
         if(doc) {
-        //     const responsePayload = {
-        //         type: ServerTypeValues.SERVER_MESSAGE,
-        //         pathInfResponse: {         
-        //             netPath: escapeRegex(formattedPath),
-        //             netStorePath: "",
-        //             result: "folder"
-        //         }
-        //     };
-        //     sendEnvelope(ws, responsePayload);
-        await handleListRequest(ws, {folderName: inputPath}/*inputPath formattedPathor msg*/, s3Client, userId)
-        return
-    } else {
+            console.log("formattedPath: ", formattedPath, " sanitizeToPath(formattedPath): ", sanitizeToPath(formattedPath))
+            await handleListRequest(ws, {folderName: inputPath}/*inputPath formattedPathor msg*/, s3Client, userId)
+            const responsePayload = {
+                type: ServerTypeValues.SERVER_MESSAGE,
+                pathInfResponse: {         
+//                    netPath: escapeRegex(formattedPath),
+                    netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath)}/`,
+                    netStorePath: "",
+                    result: "folder"
+                }
+            };
+            sendEnvelope(ws, responsePayload);
+            return
+        } else {
             const responsePayload = {
                 type: ServerTypeValues.SERVER_MESSAGE,
                 serverResp: { 
-                    content: "The path does not exist" + formattedPath,
+                    content: "The path does not exist:" + formattedPath,
                     status: "error"
                 }
             };
@@ -331,10 +336,21 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
         return;
     }
     const folderWithSlash = `${formattedPath}/`;
-    const folderQuery = { folder: { $regex: `^${escapeRegex(folderWithSlash)}` } };
+//    const folderQuery = { folder: { $regex: `^${escapeRegex(folderWithSlash)}` } };
+    const folderQuery = { folder: { $regex: `^${sanitizeToPath(folderWithSlash)}` } };
     const folderDoc = await ImageRecord.findOne(folderQuery, { projection: { _id: 1 } });
     if (folderDoc){
-        await handleListRequest(ws, {folderName: inputPath}/*inputPath or msg*/, s3Client, userId) 
+        await handleListRequest(ws, {folderName: inputPath}/*inputPath or msg*/, s3Client, userId)
+        const responsePayload = {
+            type: ServerTypeValues.SERVER_MESSAGE,
+            pathInfResponse: {         
+                netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath)}/`,
+//                netPath: S3_ENDPOINT+sanitizeToPath(formattedPath),
+                netStorePath: "",
+                result: "folder"
+            }
+        };
+        sendEnvelope(ws, responsePayload);
         return
     }
 
@@ -379,7 +395,7 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
     const responsePayload = {
         type: ServerTypeValues.SERVER_MESSAGE,
         serverResp: { 
-            content: "The path does not exist" + formattedPath,
+            content: "The path does not exist:" + formattedPath,
             status: "error"
         }
     };
@@ -414,4 +430,4 @@ function sanitizeToPath(input) {
       .map(segment => sanitize(segment))
       .filter(segment => segment.length > 0) // Remove any empty segments created by sanitization
       .join('/');
-  }
+}
