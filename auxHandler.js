@@ -105,12 +105,14 @@ export async function handleAddFile(ws, msg, s3Client, userId){
     console.log(" fileName= ", fileName, " usrLogin = ", usrLogin,
         " folder = ", folderName, " info = ", info);
 
-    const userBasePath = `${USERS}/${userId}/`;
-    const targetFolder = folderName === "" 
-        ? userBasePath 
-//        : `${userBasePath}${sanitize(folderName).replace(/^\/+|\/+$/g, '')}/`;
-        : `${userBasePath}${sanitizeToPath(folderName)}/`;
-    //const safefolder = sanitize(folder).replace(/\s+/g, '-');
+    const userBasePath = `${USERS}/${userId}`;
+
+    const targetFolder = folderName.startsWith(userBasePath) 
+        ? (folderName.endsWith('/') ? folderName : folderName + '/') 
+        : (folderName === '' 
+            ? `${userBasePath}/` 
+            : `${userBasePath}/${sanitizeToPath(folderName)}/`);
+        
     const {uniqueName, ext} = prepareFilename(fileName);
     console.log("process.env.USERS: ", process.env.USERS);
     const s3Key = `${targetFolder}${uniqueName}` 
@@ -154,10 +156,14 @@ export async function handleListRequest(ws, msg, s3Client, userId){
     const {folderName} = msg; 
     console.log("function handleListRequest folderName", folderName); //,  "userLogin", userLogin);
 
-    const userBasePath = `${USERS}/${userId}/`;
-    const targetFolder = folderName === "" 
-        ? userBasePath 
-        : `${userBasePath}${sanitizeToPath(folderName)}/`;
+    const userBasePath = `${USERS}/${userId}`;
+
+    const targetFolder = folderName.startsWith(userBasePath) 
+      ? (folderName.endsWith('/') ? folderName : folderName + '/') 
+      : (folderName === '' 
+          ? `${userBasePath}/` 
+          : `${userBasePath}/${sanitizeToPath(folderName)}/`);
+    
     console.log("targetFolder: ", targetFolder, "  BUCKET: ", BUCKET);
     // 1. We get REAL FILES in the user's target folder
     const files = await ImageRecord.find({ 
@@ -292,16 +298,16 @@ export async function handlefilesIdsRequest(ws, msg, s3Client, userId){
 
 export async function handlePathInfRequest(ws, msg, s3Client, userId){
     console.log("handlePathInfRequest  msg.netPath: ", msg.netPath, " userId: ", userId);
-    const prefix = `${USERS}/${userId}/`;
+    const prefix = `${USERS}/${userId}`;
     const inputPath = msg.netPath;
 
     // 1. Ensure the path starts with the required prefix
     let formattedPath = msg.netPath;
 //    if (!formattedPath.includes(prefix)) {
     if (!formattedPath.startsWith(prefix)) {
-        formattedPath = prefix + formattedPath;
+        formattedPath = prefix +'/'+ formattedPath;
     }
-
+    console.log("Formatted path after prefix check: ", formattedPath);
     const isExplicitFolder = formattedPath.endsWith('/');
     const escapeRegex = (str) => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     // Если путь заканчивается на '/', это может быть ТОЛЬКО папка
@@ -310,7 +316,7 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
         const query = { folder: { $regex: `^${sanitizeToPath(formattedPath)}` } };
         const doc = await ImageRecord.findOne(query, { projection: { _id: 1 } });
         if(doc) {
-            console.log("formattedPath: ", formattedPath, " sanitizeToPath(formattedPath): ", sanitizeToPath(formattedPath))
+//            console.log("formattedPath: ", formattedPath, " sanitizeToPath(formattedPath): ", sanitizeToPath(formattedPath))
             await handleListRequest(ws, {folderName: inputPath}/*inputPath formattedPathor msg*/, s3Client, userId)
             const responsePayload = {
                 type: ServerTypeValues.SERVER_MESSAGE,
@@ -321,6 +327,7 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
                     result: "folder"
                 }
             };
+            console.log("Response for folder path 1: ", responsePayload);
             sendEnvelope(ws, responsePayload);
             return
         } else {
@@ -339,6 +346,7 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
 //    const folderQuery = { folder: { $regex: `^${escapeRegex(folderWithSlash)}` } };
     const folderQuery = { folder: { $regex: `^${sanitizeToPath(folderWithSlash)}` } };
     const folderDoc = await ImageRecord.findOne(folderQuery, { projection: { _id: 1 } });
+
     if (folderDoc){
         await handleListRequest(ws, {folderName: inputPath}/*inputPath or msg*/, s3Client, userId)
         const responsePayload = {
@@ -350,6 +358,7 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
                 result: "folder"
             }
         };
+        console.log("Response for folder path 2: ", responsePayload);
         sendEnvelope(ws, responsePayload);
         return
     }
