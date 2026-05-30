@@ -28,6 +28,19 @@ router.post('/register', async (req, res) => {
         if (existingUser) {
             return res.status(400).json({ error: "Пользователь уже существует" });
         }
+        // const s3Client = new S3Client({
+        //     endpoint: S3_ENDPOINT,
+        //     region: "us-east-1", // Для MinIO любое значение
+        //     credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
+        //     forcePathStyle: true // Обязательно для MinIO
+        // });
+                //const bucketExists = await minioClient.bucketExists(BUCKET_NAME);
+        const exists = await bucketExists(BUCKET);
+        if (!exists) {
+            console.log(`Bucket ${BUCKET} does not exist. Creating...`);
+            await createS3Bucket(BUCKET);
+        }
+        else console.log(`Bucket ${BUCKET} already exists.`);
         // Создаем и сохраняем пользователя
         const newUser = new User({
             login,
@@ -38,10 +51,6 @@ router.post('/register', async (req, res) => {
         await newUser.save();
         const userId = newUser._id.toString();
 
-        //const bucketExists = await minioClient.bucketExists(BUCKET_NAME);
-        if (!bucketExists(BUCKET)) {
-            await createS3Bucket(BUCKET);
-        }
         // 2. Create a "virtual folder" for the user.
         // In S3, we simply place an empty .placeholder file in the user's folder.
         //  const placeholderPath = `users/${userId}/.placeholder`;
@@ -119,10 +128,11 @@ export default router;
 async function bucketExists(bucketName) {
     try {
       const command = new HeadBucketCommand({ Bucket: bucketName });
-      await S3Client.send(command);
+      await s3Client.send(command);
       return true; // Bucket exists and you have access
     } catch (error) {
       if (error.name === "NotFound") {
+        console.error("Error checking bucket:", error.name);
         return false; // Bucket does not exist
       }
       // Handle other errors (like 403 Forbidden) based on your needs
@@ -138,10 +148,10 @@ async function createS3Bucket(bucketName, region = "us-west-2") {
         LocationConstraint: region,
       },
     };
-  
+    console.log(`Attempting to create bucket: ${bucketName} in region: ${region}   input: `, input);
     try {
       const command = new CreateBucketCommand(input);
-      const response = await S3Client.send(command);
+      const response = await s3Client.send(command);
       console.log(`Bucket created successfully at: ${response.Location}`);
       return response;
     } catch (error) {

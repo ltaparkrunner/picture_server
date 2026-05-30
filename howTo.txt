@@ -1,3 +1,15 @@
+to delete bucket:
+sudo docker exec -it picture_server-minio-1 sh
+sh-5.1# mc alias set admin_local http://localhost:9000 admin password123
+------------Added `admin_local` successfully.
+sh-5.1# mc rb --force --dangerous admin_local/images
+------------------Removed `admin_local/images` successfully.
+sh-5.1# exit
+-----------exit
+
+
+sudo docker compose up --build
+
 When add smth forbid to create folders as files, and add files the same names as 
 folders.
 
