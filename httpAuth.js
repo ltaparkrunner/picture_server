@@ -12,9 +12,9 @@ const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = proc
 
 const s3Client = new S3Client({
     endpoint: S3_ENDPOINT,
-    region: "us-east-1", // Для MinIO любое значение
+    region: "us-east-1", // For MinIO any value
     credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
-    forcePathStyle: true // Обязательно для MinIO
+    forcePathStyle: true // Required for MinIO
 });
 
 // 2. Маршрут РЕГИСТРАЦИИ
@@ -23,25 +23,17 @@ router.post('/register', async (req, res) => {
     try {
         const { username, password } = req.body;
         const login = username;
-        // Проверяем, не занято ли имя
+        // Checking if the name is taken.
         const existingUser = await User.findOne({ login });
         if (existingUser) {
             return res.status(400).json({ error: "Пользователь уже существует" });
         }
-        // const s3Client = new S3Client({
-        //     endpoint: S3_ENDPOINT,
-        //     region: "us-east-1", // Для MinIO любое значение
-        //     credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
-        //     forcePathStyle: true // Обязательно для MinIO
-        // });
-                //const bucketExists = await minioClient.bucketExists(BUCKET_NAME);
+
         const exists = await bucketExists(BUCKET);
         if (!exists) {
-            console.log(`Bucket ${BUCKET} does not exist. Creating...`);
             await createS3Bucket(BUCKET);
         }
-        else console.log(`Bucket ${BUCKET} already exists.`);
-        // Создаем и сохраняем пользователя
+        // Сreate and save a user
         const newUser = new User({
             login,
             password: password
@@ -53,9 +45,7 @@ router.post('/register', async (req, res) => {
 
         // 2. Create a "virtual folder" for the user.
         // In S3, we simply place an empty .placeholder file in the user's folder.
-        //  const placeholderPath = `users/${userId}/.placeholder`;
         const placeholderPath = `${USERS}/${userId}/.placeholder`;
-        //  await minioClient.putObject(BUCKET_NAME, placeholderPath, "init");
         const command = new PutObjectCommand({
             Bucket: BUCKET,
             Key: placeholderPath,
@@ -63,15 +53,12 @@ router.post('/register', async (req, res) => {
         });
     
         await s3Client.send(command);
-        // Сразу создаем токен, чтобы пользователю не нужно было логиниться после регистрации
-        console.log("process.env.JWT_SECRET: ", process.env.JWT_SECRET);
-        console.log("process.env.JWT_EXPIRES_IN: ", process.env.JWT_EXPIRES_IN);
+        // immediately create a token
         const token = jwt.sign(
             { id: newUser._id }, 
             process.env.JWT_SECRET || 'secret_key', 
             { expiresIn: process.env.JWT_EXPIRES_IN || '4h' }
         );
-        console.log("User registered successfully: ", newUser.login);
         res.status(201).json({ 
             message: "Пользователь создан",
             token: token 
@@ -85,10 +72,6 @@ router.post('/register', async (req, res) => {
 
 // 3. Обновленный маршрут ЛОГИНА (с проверкой хеша)
 router.post('/login', async (req, res) => {
-    console.log("Received login request: ", req.body);
-    console.log("process.env.USERS: ", process.env.USERS); 
-    console.log("process.env.JWT_SECRET: ", process.env.JWT_SECRET);
-    console.log("process.env.JWT_EXPIRES_IN: ", process.env.JWT_EXPIRES_IN);
     try {
         const { username, password } = req.body;
         const login = username;
@@ -96,13 +79,9 @@ router.post('/login', async (req, res) => {
 
         if (!user) return res.status(401).json({ error: "Неверный логин" });
         console.log("User found: ", login);
-        // Сравниваем присланный пароль с хешем в базе
+        // Compare the provided password with the stored hash
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            console.log("Incorrect password for user: ", password);
-            // const hashedPassword = await bcrypt.hash(password, 10);
-            // console.log("Hashed version of incorrect password: ", hashedPassword, 
-            //     "  Stored hash: ", user.password);
             return res.status(401).json({ error: "Неверный пароль" });
         }
         console.log("Correct password: ", password);
@@ -116,15 +95,6 @@ router.post('/login', async (req, res) => {
 
 export default router; 
 
-
-// 2. Логика в маршруте регистрацииconst 
-
-// client = new S3Client({ endpoint: S3_ENDPOINT,
-//                         region: "us-east-1",
-//                         credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
-//                         forcePathStyle: true
-//                      });
-
 async function bucketExists(bucketName) {
     try {
       const command = new HeadBucketCommand({ Bucket: bucketName });
@@ -132,7 +102,6 @@ async function bucketExists(bucketName) {
       return true; // Bucket exists and you have access
     } catch (error) {
       if (error.name === "NotFound") {
-        console.error("Error checking bucket:", error.name);
         return false; // Bucket does not exist
       }
       // Handle other errors (like 403 Forbidden) based on your needs
@@ -159,41 +128,3 @@ async function createS3Bucket(bucketName, region = "us-west-2") {
       throw error;
     }
   }
-
-// В S3 (Minio) папки не существуют как физические объекты — они создаются автоматически,
-//  когда вы загружаете файл по пути folder/file.dat. Поэтому при регистрации лучше всего
-//   создать «маркер-файл» или просто убедиться, что основной бакет существует.
-/*
-app.post('/register', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-
-        // ... (код проверки и хеширования из предыдущего шага) ...
-
-        const newUser = new User({ username, password: hashedPassword });
-        await newUser.save();
-
-        // --- РАБОТА С MINIO ---
-        const userId = newUser._id.toString();
-        
-        // 1. Проверяем/создаем общий бакет
-        const bucketExists = await minioClient.bucketExists(BUCKET_NAME);
-        if (!bucketExists) {
-            await minioClient.makeBucket(BUCKET_NAME);
-        }
-
-        // 2. Создаем "виртуальную папку" для пользователя.
-        // В S3 мы просто кладем пустой файл .placeholder в папку пользователя.
-        const placeholderPath = `users/${userId}/.placeholder`;
-        await minioClient.putObject(BUCKET_NAME, placeholderPath, "init");
-
-        // --- ЗАВЕРШЕНИЕ ---
-        const token = jwt.sign({ id: userId }, 'secret_key', { expiresIn: '2h' });
-        res.status(201).json({ token });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Ошибка при создании окружения пользователя" });
-    }
-});
-*/
