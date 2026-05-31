@@ -1,5 +1,5 @@
-import { handleViewFolder, handleGetFolderContent, handleGetFolderOnlyFilesContent} from './handlers.js';
-import { handleRegister, handleLogin, verifyToken} from './authHandlers.js';
+//  import { handleViewFolder, handleGetFolderContent, handleGetFolderOnlyFilesContent} from './handlers.js';
+//  import { handleRegister, handleLogin, verifyToken} from './authHandlers.js';
 import https from 'https';
 import fs from 'fs';
 import { WebSocketServer } from 'ws';
@@ -21,7 +21,7 @@ import 'dotenv/config';
 
 const USERS = process.env.USERS || 'users';
 const BUCKET = process.env.BUCKET_NAME || 'images';
-console.log("Config variable process.env.USERS: ", process.env.USERS);
+//  console.log("Config variable process.env.USERS: ", process.env.USERS);
 const app = express();
 app.use(express.json());
 app.use('/auth', router);
@@ -31,22 +31,22 @@ app.listen(8081, () => console.log('Auth server running on port 8081'));
 // Настройки из окружения
 const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = process.env;
 
-console.log("S3_ENDPOINT: ", S3_ENDPOINT, " S3_ACCESS_KEY: ", S3_ACCESS_KEY, " S3_SECRET_KEY: ", S3_SECRET_KEY, " S3_BUCKET: ", S3_BUCKET, " MONGO_URL: ", MONGO_URL);  
+//  console.log("S3_ENDPOINT: ", S3_ENDPOINT, " S3_ACCESS_KEY: ", S3_ACCESS_KEY, " S3_SECRET_KEY: ", S3_SECRET_KEY, " S3_BUCKET: ", S3_BUCKET, " MONGO_URL: ", MONGO_URL);  
 
 const serverConfig = {
     key: fs.readFileSync('key.pem'),
     cert: fs.readFileSync('cert.pem')
 };
 
-// 1. Подключение к MongoDB
+// 1. Connecting to MongoDB
 mongoose.connect(MONGO_URL);
 
-// 2. Настройка S3 (MinIO) клиента
+// 2. Setting of S3 (MinIO) client
 const s3Client = new S3Client({
   endpoint: S3_ENDPOINT,
-  region: "us-east-1", // Для MinIO любое значение
+  region: "us-east-1", // for MinIO any value 
   credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
-  forcePathStyle: true // Обязательно для MinIO
+  forcePathStyle: true // Required for MinIO
 });
 
 async function getDownloadUrl(bucketName, fileName) {
@@ -61,22 +61,22 @@ async function getDownloadUrl(bucketName, fileName) {
     }
 }
 
-const createCommand = new CreateBucketCommand({ 
-    Bucket: BUCKET 
-});
-async function bootstrap() {
-    try {
-        //  console.log("An attempt to create backet:", createCommand.input.Bucket);
-        await s3Client.send(createCommand);
-        //  console.log("Bucket ", reateCommand.input.Bucket, " created successfully.");
-    } catch (err) {
-        if (err.Code === 'BucketAlreadyOwnedByYou' || err.Code === 'BucketAlreadyExists') {
-            //  console.log("Bucket ", reateCommand.input.Bucket, " exists already, proceeding...");
-        } else {
-            // console.error("Ошибка инициализации хранилища:", err);
-        }
-    }
-}
+// const createCommand = new CreateBucketCommand({ 
+//     Bucket: BUCKET 
+// });
+// async function bootstrap() {
+//     try {
+//         //  console.log("An attempt to create backet:", createCommand.input.Bucket);
+//         await s3Client.send(createCommand);
+//         //  console.log("Bucket ", reateCommand.input.Bucket, " created successfully.");
+//     } catch (err) {
+//         if (err.Code === 'BucketAlreadyOwnedByYou' || err.Code === 'BucketAlreadyExists') {
+//             //  console.log("Bucket ", reateCommand.input.Bucket, " exists already, proceeding...");
+//         } else {
+//             // console.error("Ошибка инициализации хранилища:", err);
+//         }
+//     }
+// }
 
 //  bootstrap(); // performed once
 protobuf.load("image.proto", (err, root) => {
@@ -104,7 +104,7 @@ protobuf.load("image.proto", (err, root) => {
         const token = authHeader.split(' ')[1];
 
         try {
-            console.log("process.env.JWT_SECRET: ", process.env.JWT_SECRET);
+            //  console.log("process.env.JWT_SECRET: ", process.env.JWT_SECRET);
             // 2. Верифицируем токен (проверит и подпись, и expiration time)
             const secret = process.env.JWT_SECRET || 'secret_key';
             const decoded = jwt.verify(token, secret);
@@ -123,7 +123,7 @@ protobuf.load("image.proto", (err, root) => {
         }
     });
     wss.on('connection', (ws, req) => {
-        console.log('Secure Qt Client connected via WSS: ', req.user);
+        //  console.log('Secure Qt Client connected via WSS: ', req.user);
 
         ws.on('message', async (message) => {
             try {
@@ -132,27 +132,27 @@ protobuf.load("image.proto", (err, root) => {
                 const envelope = ClientEnvelope.decode(message);
                 
                 const ClientTypeValues = ClientEnvelope.nested.Type.values;
-                console.log("ClientTypeValues: ", ClientTypeValues);
+//                console.log("ClientTypeValues: ", ClientTypeValues);
                 // Определяем тип запроса на основе поля 'type'
-                console.log("ClientTypeValues.AUTH_REQUEST: ", ClientTypeValues.AUTH_REQUEST, "   envelope.type: ", envelope.type)
+//                console.log("ClientTypeValues.AUTH_REQUEST: ", ClientTypeValues.AUTH_REQUEST, "   envelope.type: ", envelope.type)
 //                    , "ClientTypeValues.AUTH_REQUEST: ", ClientTypeValues.AUTH_REQUEST)
                 const user = await User.findOne({ _id: req.user.id });
                 const emaillogin = user ? user.login : "Unknown";
-                console.log("Decoded Protobuf message content: ", envelope.type, " from user: ", emaillogin); 
+//                console.log("Decoded Protobuf message content: ", envelope.type, " from user: ", emaillogin); 
 
                 switch (envelope.type) {
-                    case ClientTypeValues.AUTH_REQUEST:
-                        console.log("case ClientTypeValues.AUTH_REQUEST")
-                        if (envelope.authRequest) {
-                            console.log("envelope.authRequest")
-                            await handleLogin(ws, envelope.authRequest);
-                        } else if (envelope.regRequest) {
-                            console.log("envelope.regRequest")
-                            await handleRegister(ws, envelope.regRequest);
-                        } else {
-                            console.log('Other AUTH_REQUEST content received:', envelope.content);
-                        }
-                        break;
+                    // case ClientTypeValues.AUTH_REQUEST:
+                    //     console.log("case ClientTypeValues.AUTH_REQUEST")
+                    //     if (envelope.authRequest) {
+                    //         console.log("envelope.authRequest")
+                    //         await handleLogin(ws, envelope.authRequest);
+                    //     } else if (envelope.regRequest) {
+                    //         console.log("envelope.regRequest")
+                    //         await handleRegister(ws, envelope.regRequest);
+                    //     } else {
+                    //         console.log('Other AUTH_REQUEST content received:', envelope.content);
+                    //     }
+                    //     break;
                     case ClientTypeValues.CLIENT_MESSAGE:
                         if(envelope.reqUserBuckets){
                             // console.log("Received bucket list request from user: ", req.user ? req.user.id : "Unknown");
@@ -177,7 +177,7 @@ protobuf.load("image.proto", (err, root) => {
                             // console.log("Received infoByNetPathRequest from user: ", req.user ? req.user.id : "Unknown");
                             await handlePathInfRequest(ws, envelope.pathInfRequest, s3Client, req.user.id);
                         }
-                        console.log(`User ${user.login} is authorized to see files`);
+//                        console.log(`User ${user.login} is authorized to see files`);
                         // Проверяем, пришел ли запрос на регистрацию
                         console.log('Other CLIENT_MESSAGE content received:', envelope.content);
                         break;
@@ -188,7 +188,7 @@ protobuf.load("image.proto", (err, root) => {
                 }
             } catch (error) {
                 console.error('Failed to process incoming message:', error);
-                sendAuthError(ws, 'Internal server error processing payload.'); //TODO
+                sendError(ws, 'Internal server error processing payload.'); //TODO
             }
         });
     });
@@ -200,3 +200,13 @@ protobuf.load("image.proto", (err, root) => {
 
 });
 
+function sendError(ws, errorMessage) {
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        serverResp: {         
+            content: errorMessage,
+            status: "error",
+        }
+    };
+    sendEnvelope(ws, responsePayload);
+}

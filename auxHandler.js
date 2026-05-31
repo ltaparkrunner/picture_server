@@ -62,6 +62,7 @@ export async function handleGetUserBucket(ws, msg, s3Client, user){
                     status: "error"
                 }
             };
+            console.log("Response for non-existing path: ", responsePayload);
             sendEnvelope(ws, responsePayload);
         }
         const responsePayload = {
@@ -71,6 +72,7 @@ export async function handleGetUserBucket(ws, msg, s3Client, user){
                 status: "error"
             }
         };
+        console.log("Response for non-existing path: ", responsePayload);
         sendEnvelope(ws, responsePayload); // Other errors (e.g., Access Denied)
     }
 }
@@ -338,6 +340,7 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
                     status: "error"
                 }
             };
+            console.log("Response for non-existing path: ", responsePayload);
             sendEnvelope(ws, responsePayload);
         }
         return;
@@ -408,6 +411,7 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
             status: "error"
         }
     };
+    console.log("Response for non-existing path: ", responsePayload);
     sendEnvelope(ws, responsePayload);
     return;
 }
