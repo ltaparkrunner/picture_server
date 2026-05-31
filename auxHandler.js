@@ -305,10 +305,13 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
 
     // 1. Ensure the path starts with the required prefix
     let formattedPath = msg.netPath;
-//    if (!formattedPath.includes(prefix)) {
     if (!formattedPath.startsWith(prefix)) {
-        formattedPath = prefix +'/'+ formattedPath;
+        if (formattedPath.startsWith(USERS)) { 
+            formattedPath = prefix + formattedPath.substring(USERS.length); 
+        }
+        else formattedPath = prefix +'/'+ formattedPath;
     }
+
     console.log("Formatted path after prefix check: ", formattedPath);
     const isExplicitFolder = formattedPath.endsWith('/');
     const escapeRegex = (str) => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
@@ -324,7 +327,7 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
                 type: ServerTypeValues.SERVER_MESSAGE,
                 pathInfResponse: {         
 //                    netPath: escapeRegex(formattedPath),
-                    netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath)}/`,
+                    netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
                     netStorePath: "",
                     result: "folder"
                 }
@@ -335,9 +338,10 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
         } else {
             const responsePayload = {
                 type: ServerTypeValues.SERVER_MESSAGE,
-                serverResp: { 
-                    content: "The path does not exist:" + formattedPath,
-                    status: "error"
+                pathInfResponse: {         
+                    netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+                    netStorePath: "",
+                    result: "not exist"
                 }
             };
             console.log("Response for non-existing path: ", responsePayload);
@@ -355,8 +359,7 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
         const responsePayload = {
             type: ServerTypeValues.SERVER_MESSAGE,
             pathInfResponse: {         
-                netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath)}/`,
-//                netPath: S3_ENDPOINT+sanitizeToPath(formattedPath),
+                netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
                 netStorePath: "",
                 result: "folder"
             }
@@ -406,9 +409,10 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
 
     const responsePayload = {
         type: ServerTypeValues.SERVER_MESSAGE,
-        serverResp: { 
-            content: "The path does not exist:" + formattedPath,
-            status: "error"
+        pathInfResponse: {         
+            netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+            netStorePath: "",
+            result: "not exist"
         }
     };
     console.log("Response for non-existing path: ", responsePayload);
