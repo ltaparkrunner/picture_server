@@ -155,9 +155,9 @@ export async function handleAddFile(ws, msg, s3Client, userId){
 }
 
 export async function handleListRequest(ws, msg, s3Client, userId){
-    const {folderName} = msg; 
+    var {folderName} = msg; 
     console.log("function handleListRequest folderName", folderName); //,  "userLogin", userLogin);
-
+    if(folderName.endsWith('/')) folderName = folderName.slice(0, -1);
     const userBasePath = `${USERS}/${userId}`;
 
     const targetFolder = folderName.startsWith(userBasePath) 
@@ -207,10 +207,10 @@ export async function handleListRequest(ws, msg, s3Client, userId){
         };
     }));
     // 3. Preparing an array of folders for Protobuf
-
+    
     const foldersPayload = Array.from(folders).map(folderNm => ({
         folderName: folderNm._id,
-        url: `${minioPath}${folderName}${folderNm._id}/`
+        url: folderName===""? `${minioPath}${folderNm._id}/`:`${minioPath}${folderName}/${folderNm._id}/`
     }));
     console.log("Prepared folders payload: ", foldersPayload);
     const responsePayload = {
