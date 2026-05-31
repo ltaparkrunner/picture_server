@@ -45,7 +45,7 @@ export async function handleGetUserBucket(ws, msg, s3Client, user){
         const config = await s3Client.config.endpoint();
         const bucketInfo = [{
             bucketName: BUCKET, 
-            url: `${config.protocol}//${config.hostname}:${config.port}/${BUCKET}`
+            url: `${config.protocol}//${config.hostname}:${config.port}/${BUCKET}/`
         }];
         console.log("bucketInfo: ", BUCKET);
         const responsePayload = {
@@ -207,9 +207,10 @@ export async function handleListRequest(ws, msg, s3Client, userId){
         };
     }));
     // 3. Preparing an array of folders for Protobuf
+
     const foldersPayload = Array.from(folders).map(folderNm => ({
         folderName: folderNm._id,
-        url: `${minioPath}${targetFolder}${folderNm._id}/`
+        url: `${minioPath}${folderName}${folderNm._id}/`
     }));
     console.log("Prepared folders payload: ", foldersPayload);
     const responsePayload = {
@@ -327,7 +328,8 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
                 type: ServerTypeValues.SERVER_MESSAGE,
                 pathInfResponse: {         
 //                    netPath: escapeRegex(formattedPath),
-                    netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+//                    netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+                    netPath: `${S3_ENDPOINT}${BUCKET}/${inputPath}`,
                     netStorePath: "",
                     result: "folder"
                 }
@@ -339,7 +341,8 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
             const responsePayload = {
                 type: ServerTypeValues.SERVER_MESSAGE,
                 pathInfResponse: {         
-                    netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+//                    netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+                    netPath: `${S3_ENDPOINT}${BUCKET}/${inputPath}/`,
                     netStorePath: "",
                     result: "not exist"
                 }
@@ -359,7 +362,8 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
         const responsePayload = {
             type: ServerTypeValues.SERVER_MESSAGE,
             pathInfResponse: {         
-                netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+//                netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+                netPath: `${S3_ENDPOINT}${BUCKET}/${inputPath}/`,
                 netStorePath: "",
                 result: "folder"
             }
@@ -410,7 +414,8 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
     const responsePayload = {
         type: ServerTypeValues.SERVER_MESSAGE,
         pathInfResponse: {         
-            netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+//            netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+            netPath: `${S3_ENDPOINT}${BUCKET}/${inputPath}/`,
             netStorePath: "",
             result: "not exist"
         }
