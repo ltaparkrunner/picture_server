@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User from './model/User.js';
+import ImageRecord from './model/ImageRecord.js';
 import { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, ListBucketsCommand, DeleteObjectCommand} from "@aws-sdk/client-s3";
 
 const router = express.Router();
@@ -53,6 +54,19 @@ router.post('/register', async (req, res) => {
         });
     
         await s3Client.send(command);
+
+        // 5. Create and save the placeholder record to MongoDB
+        const placeholderRecord = new ImageRecord({
+            name: '.placeholder',
+            originalName: '.placeholder',
+            folder: `${USERS}/${userId}`,
+            s3Key: placeholderPath,
+            bucket: BUCKET,
+            userLogin: login, // Or use userId if preferred
+            size: 0,
+            info: { type: 'initialization_file' }
+        });
+        await placeholderRecord.save();
         // immediately create a token
         const token = jwt.sign(
             { id: newUser._id }, 
