@@ -1,10 +1,21 @@
-FROM node:18-slim
+FROM node:20-alpine
+
+# Устанавливаем зависимости для сборки бинарных модулей (необходимы для bcrypt на alpine)
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /app
-# Копируем файлы зависимостей
+
+# Сначала копируем файлы зависимостей для эффективного кэширования слоев Docker
 COPY package*.json ./
+
+# Устанавливаем зависимости (включая production и dev, если нужен nodemon для разработки)
+# RUN npm ci
 RUN npm install
-# Копируем остальные файлы (server.js, image.proto)
+
+# Копируем исходный код проекта
 COPY . .
-EXPOSE 3000
-# EXPOSE 8080
-CMD ["node", "server.js"]
+
+# Проект работает на порту 8080
+EXPOSE 8080
+
+CMD ["npm", "start"]
