@@ -1,0 +1,1737 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+model/
+  ImageRecord.js
+  User.js
+.gitignore
+auxHandler.js
+cert.pem
+docker-compose.yml
+Dockerfile
+howTo.txt
+httpAuth.js
+image.proto
+key.pem
+package.json
+README.md
+sertificate.txt
+server.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="model/User.js">
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+
+const userSchema = new mongoose.Schema({
+    login: { 
+        type: String, 
+        required: true, 
+        unique: true, // Логин должен быть уникальным
+        trim: true 
+    },
+    password: { 
+        type: String, 
+        required: true 
+    },
+    createdAt: { 
+        type: Date, 
+        default: Date.now 
+    }
+});
+
+// Автоматическое шифрование пароля перед сохранением
+userSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) return next();
+    
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+});
+
+// Метод для проверки пароля при входе
+userSchema.methods.comparePassword = async function(candidatePassword) {
+    return bcrypt.compare(candidatePassword, this.password);
+};
+
+export default mongoose.model('User', userSchema);
+</file>
+
+<file path="cert.pem">
+-----BEGIN CERTIFICATE-----
+MIIFCTCCAvGgAwIBAgIUHuwRCaesjimOXMqsW/W3RboTKCAwDQYJKoZIhvcNAQEL
+BQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDQxNDE0MzMwNloXDTI3MDQx
+NDE0MzMwNlowFDESMBAGA1UEAwwJbG9jYWxob3N0MIICIjANBgkqhkiG9w0BAQEF
+AAOCAg8AMIICCgKCAgEAlXXzLELUzguoNsf9VUzpBmgnU+2xBAPanLlynppOOymw
+xF+PZO0709GQEuI8h4OtXoe7Zq5heEbvo3inZoyqfUkBR+6rqoiJIWIxFrpuzNIg
+WvCmu/oS8lfwsUWLJqDZ+3BSgFqkIbLJG5pB26agONo2do6sO3vttHPUWyaz/Qf1
+AJs8eaxjeg8UpK/IEGSOy5MkUYmJftofQEVx5UNORq8SkQrXx4roYboX4BUzgt0h
+CpMiuXoCgaFVUvY6l3MLmPUkjwklAjfJm4ls6OEgGkF72hx+pYHCUA2jNRGyotqo
+JeFn/wX21+Sk11GK430quqzh+J5kvB1vLqfWM0aL/AUoGjn+jY3GHDu4cmas1hYG
+rrX1Gwuk8zLiqC893wSigwPxzNJf1aA5kLMcg9p6iJm80T+ueCtH5NEjwBYJ2PPz
+kNxDzhA6iSkQOLOZMTIH3ZxmYtSsjmUyQsjcwwBpdRqSsGlZR226tcvhXkcCZh9n
+sZ9W9VeaNuP6T+ntaE8elk4qDg4FGycdNYtply3VOLdwwr6ho0wK+I9LammPAXSD
+TL0/BOqFHuqmKQB6S4ndaiI4r73+80PhP7W1WRX4X+DD3qDeRs9iyxWfrRe/9EA2
+rrxaHcX585RvfeQVEV8T8wbaLiAyyzYWhpEdkSi7XA61S/yC97GAEqKlK+bwvdMC
+AwEAAaNTMFEwHQYDVR0OBBYEFIZiOvoReqMP32J7Xoqgmlt7KhgbMB8GA1UdIwQY
+MBaAFIZiOvoReqMP32J7Xoqgmlt7KhgbMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZI
+hvcNAQELBQADggIBABuRPhN3eivSImB2Z0uvU5yHD24J8FSC5DC2um8RngilR5vW
+bGhQSILTeZuZmNaqzp/3qjPMsDJ98np7UVVKGdoa1S9SUSkyoRKAwBCMtx8241/S
+vnUZENVkd3KLflUwKLxWUgDZKRQ4iQI+k/lX+sKVtIl1aO6wvqTf23vM0jPZDq/R
+yNVTjob+60l+b8hQu+O7TUVcce9yMBJ0kPXxyfxyLmy81Hwyzk7oOa9lfg1/GpqO
+V/2TYUvQcU9ifguWN7Vl61rYGZ37rjQQv8jVQtlDLJsFAjOEVppOM3AMMy1dmaSB
+5fItCc9EIP9N2DPINZSiCJonNDa7UG9nLsNNgNpMXvPkHLM/77lmXaeeBtlrLyXe
+O6e+bsw+gcsQowuoveirTRYa2bLWikn3IsCymL4bFZjVx7mR7Pdoqw53PuXHbwVr
+D5GIMh4xXXMouF4s8SdLUdmR1SvCEqyQC7m1uNSfoMQoSsANeQohdNp2RpdUh6HA
+vpEilVyhICdkwUb2pVBjn3nemZTo9pIS08TVSI8agmmhSqUhc3igBFVX+ET3SukI
+prVwewZuts/vNtCB0sx1fqangeYnrGwBugss6/Wxzurs1/nLtW+V2adpP6+3i0v6
+DbIrEH/692gXmeCa5u/DLDeknILiXatPRju9PIalv8Rg3PKPTbBTtY6Gnfef
+-----END CERTIFICATE-----
+</file>
+
+<file path="README.md">
+# picture_service
+A simple server on Node.js + Socket.io + Protobuf + MongoDB + MinIO that saves, stores and restores images.
+</file>
+
+<file path="sertificate.txt">
+Import-Certificate -FilePath "C:\wrk\nodejs\picture_server\cert.pem" -CertStoreLocation Cert:\LocalMachine\Root
+</file>
+
+<file path="model/ImageRecord.js">
+import mongoose from 'mongoose';
+
+const imageRecordSchema = new mongoose.Schema({
+    name: String,           // Можно оставить для краткости
+    originalName: String,   // Имя файла
+    folder: String,
+    s3Key: String,          // Путь в MinIO
+    bucket: String,         // Бакет
+    userLogin: String,      // ID или логин пользователя
+    size: Number,
+    info: mongoose.Schema.Types.Mixed, // Для произвольных данных (объектов)
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Создаем модель и экспортируем её
+const ImageRecord = mongoose.model('ImageRecord', imageRecordSchema);
+//  module.exports = ImageRecord;
+export default ImageRecord; // Должно быть слово default
+</file>
+
+<file path="Dockerfile">
+FROM node:24-slim
+WORKDIR /app
+# Копируем файлы зависимостей
+COPY package*.json ./
+RUN npm install
+# Копируем остальные файлы (server.js, image.proto)
+COPY . .
+EXPOSE 3000
+# EXPOSE 8080
+CMD ["node", "server.js"]
+</file>
+
+<file path=".gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory for instrumented libs generated by jscoverage/JSCover
+lib-cov
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+.grunt
+
+# Bower dependency directory (https://bower.io/)
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Snowpack dependency directory (https://snowpack.dev/)
+web_modules/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variable files
+.env
+.env.*
+!.env.example
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+# Comment in the public line in if your project uses Gatsby and not Next.js
+# https://nextjs.org/blog/next-9-1#public-directory-support
+# public
+
+# vuepress build output
+.vuepress/dist
+
+# vuepress v2.x temp and cache directory
+.temp
+.cache
+
+# Sveltekit cache directory
+.svelte-kit/
+
+# vitepress build output
+**/.vitepress/dist
+
+# vitepress cache directory
+**/.vitepress/cache
+
+# Docusaurus cache and generated files
+.docusaurus
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# Firebase cache directory
+.firebase/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v3
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Vite logs files
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# build folders (if use TypeScript or Babel)
+dist/
+build/
+out/
+
+# Docker (data, if you mounted them in local folder instead of named volumes)
+.data/
+mongo_data/
+minio_data/
+
+# Specific os files
+.DS_Store
+Thumbs.db
+
+# auxilary files
+ai.js2
+
+#config info
+.env
+</file>
+
+<file path="docker-compose.yml">
+services:
+  app:
+    build: .
+    ports:
+      - "8081:8081"      
+      - "8082:8080"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/images_db
+      - S3_ENDPOINT=http://minio:9000/
+      - S3_ACCESS_KEY=admin
+      - S3_SECRET_KEY=password123
+      - S3_BUCKET=photos
+    depends_on:
+      - mongo
+      - minio
+
+  mongo:
+    image: mongo:latest
+    volumes:
+      - mongo_data:/data/db
+      
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000" # API
+      - "9001:9001" # Консоль управления (логин: admin / пароль: password123)
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  mongo_data:
+  minio_data:
+</file>
+
+<file path="package.json">
+{
+  "name": "picture-server",
+  "version": "1.0.0",  
+   "type": "module",
+    "dependencies": {
+      "express": "^4.18.2",
+      "dotenv": "^16.4.5",
+      "jsonwebtoken": "^9.0.0",
+      "sanitize-filename": "^1.6.3",
+      "bcrypt": "^5.1.1",
+      "ws": "^8.13.0",
+      "protobufjs": "^7.2.5",
+      "mongoose": "^7.5.0",
+      "@aws-sdk/client-s3": "^3.400.0",
+      "@aws-sdk/s3-request-presigner": "^3.400.0",
+      "uuid": "^10.0.0"
+  }
+}
+</file>
+
+<file path="howTo.txt">
+to delete bucket:
+sudo docker exec -it picture_server-minio-1 sh
+sh-5.1# mc alias set admin_local http://localhost:9000 admin password123
+------------Added `admin_local` successfully.
+sh-5.1# mc rb --force --dangerous admin_local/images
+------------------Removed `admin_local/images` successfully.
+sh-5.1# exit
+-----------exit
+
+
+sudo docker compose up --build
+
+When add smth forbid to create folders as files, and add files the same names as 
+folders.
+
+I have config variable configvar USERS, it is used in httpAuth.js, and in auxHandlers.js
+process.env.JWT_SECRET
+process.env.JWT_EXPIRES_IN
+process.env.USERS
+
+export async function handleViewFolder(msg, root, s3Client, BaseMessage, ws)
+
+    const bucketName = msg.listRequest.bucketName;
+    const folderName = msg.listRequest.folderName;
+    const usrLogin = msg.listRequest.userLogin;
+
+await s3Client.send(new HeadBucketCommand({ Bucket: bucketName }));
+check existance of bucket throwgh exception (try catch).
+may be try to send error message after try-catch construction?
+
+Import-Certificate -FilePath "C:\wrk\nodejs\picture_server\cert.pem" -CertStoreLocation Cert:\LocalMachine\Root
+Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Thumbprint -eq "DB0380C6BD8B7102EBF8C947613219BD44A51110" } | Select-Object Subject, FriendlyName, DnsNameList | Format-List
+
+docker run -it --rm node npx wscat -c wss://host.docker.internal:8080
+
+MongoDB store metadata.
+
+more information about relation between mongoDB information and Minio saved files names and information?
+В связке Minio + MongoDB база данных обычно служит «интеллектуальной картой» для «глупого» хранилища файлов. В Minio лежат сами байты, а в MongoDB — всё остальное.
+Вот основные принципы их взаимодействия:
+1. Что хранить в MongoDB (Метаданные)
+    Вместо того чтобы искать файлы перебором в Minio (что медленно), вы создаете документ в коллекции (например, images или files):
+    _id: Уникальный идентификатор записи.
+    minioKey: Точный путь к файлу в бакете (например, 2024/05/uuid_filename.jpg). Это главный мостик между системами.
+    originalName: Имя файла, которое видел пользователь (например, отпуск.jpg).
+    bucket: Имя бакета (если их несколько).
+    mimeType: Тип контента (image/jpeg, application/pdf), чтобы правильно отдавать файл в браузере.
+    size: Размер в байтах.
+    userId: Кто загрузил файл (для прав доступа).
+    createdAt: Дата загрузки.
+2. Логическая связь: как это работает
+    Процесс обычно выглядит так:
+    Загрузка: Вы генерируете уникальное имя (как мы обсуждали выше), загружаете файл в Minio, а затем создаете запись в MongoDB, где это имя сохранено в поле minioKey.
+    Поиск: Когда пользователю нужно увидеть свои фото, вы делаете запрос в MongoDB: db.images.find({ userId: 123 }). Из базы вы получаете список minioKey.
+    Удаление:
+    Сначала находите документ в MongoDB.
+    Берете из него minioKey.
+    Вызываете DeleteObjectCommand для Minio.
+    После успеха удаляете документ из MongoDB.
+3. Почему нельзя хранить только в Minio?
+    Поиск: В Minio нельзя быстро найти все файлы, загруженные "вчера" или файлы "определенного пользователя". MongoDB делает это мгновенно.
+    Связи: В MongoDB файл можно привязать к конкретному посту в блоге или товару в магазине.
+    Скорость: Получить список из 100 документов из Mongo гораздо быстрее, чем запрашивать список объектов (ListObjects) из S3 API.
+    Пример документа в MongoDB:
+    json
+    {
+        "_id": ObjectId("652f..."),
+        "fileName": "avatar_123.png",
+        "originalName": "me.png",
+        "path": "users/avatars/1715856000_me.png", 
+        "bucket": "user-content",
+        "metadata": {
+            "width": 800,
+            "height": 600
+        }
+    }
+    Используйте код с осторожностью.
+    Главный совет: Всегда делайте minioKey (путь к файлу) уникальным. Если вы просто будете хранить photo.jpg и два пользователя загрузят файл с таким именем, второй перезапишет первый в Minio, и ваша база данных станет неактуальной.
+    Хотите увидеть пример кода, который одновременно сохраняет инфо в MongoDB и загружает файл в Minio?
+
+Способ 2: Иерархия путей в MinIO (Логическая связь)
+Чтобы файлы не перемешивались внутри самого MinIO, используйте логику префиксов (папок), основанную на ID пользователя.
+Пример формирования пути в handlers.js:
+javascript
+async function uploadFile(user, file) {
+    // Формируем путь: "users/<USER_ID>/<FILENAME>"
+    const s3Key = `users/${user._id}/${file.name}`;
+
+    const newImage = new ImageRecord({
+        originalName: file.name,
+        s3Key: s3Key,
+        bucket: "my-app-storage",
+        userId: user._id // Привязываем к ID из MongoDB
+    });
+
+    await newImage.save();
+}
+Используйте код с осторожностью.
+Как это работает на практике:
+Безопасность: Когда пользователь запрашивает файл, вы сначала идете в MongoDB:
+const img = await ImageRecord.findOne({ _id: imgId, userId: currentUserId });
+Если запись не найдена, значит, пользователь пытается скачать чужой файл — вы выдаете ошибку 403.
+Удаление пользователя: Если вы удаляете аккаунт, вы легко находите все записи в базе по userId, удаляете объекты из MinIO по их s3Key, а затем удаляете записи из базы.
+Квоты: Вы можете легко посчитать, сколько места занимают файлы пользователя:
+javascript
+const stats = await ImageRecord.aggregate([
+    { $match: { userId: user._id } },
+    { $group: { _id: null, totalSize: { $sum: "$size" } } }
+]);
+Используйте код с осторожностью.
+Что выбрать?
+Если у вас один общий бакет для всех — используйте Способ 2 (префиксы users/id/... внутри бакета). Это проще всего в поддержке.
+
+
+How to get the list of files and folders by particular bucket and folders in my nodejs Minio/MongoDB server?
+Для получения списка файлов и папок в системе, где MinIO хранит физические объекты, а MongoDB — их метаданные, лучше всего делать запрос именно к MongoDB. Это намного быстрее и позволяет реализовать виртуальную иерархию.
+Вот как реализовать получение содержимого конкретной «папки» в бакете:
+1. Логика запроса в MongoDB
+Если вы используете структуру путей в поле s3Key (например, users/alex/photos/image.jpg), то чтобы получить содержимое папки users/alex/, нам нужно найти все записи, которые начинаются с этого пути, но не уходят в более глубокие подпапки.
+2. Функция в handlers.js
+Эта функция вернет список файлов и «виртуальных» подпапок для заданного пути:
+javascript
+import ImageRecord from './model/ImageRecord.js';
+
+async function getFolderContent(bucketName, folderPath = "") {
+    // Гарантируем, что путь заканчивается слэшем, если он не пустой
+    const prefix = folderPath === "" ? "" : (folderPath.endsWith('/') ? folderPath : folderPath + '/');
+    
+    // Ищем все записи в заданном бакете, начинающиеся с префикса
+    const items = await ImageRecord.find({
+        bucket: bucketName,
+        s3Key: new RegExp('^' + prefix) 
+    });
+
+    const folders = new Set();
+    const files = [];
+
+    items.forEach(item => {
+        // Отрезаем префикс текущей папки от полного пути
+        const relativePath = item.s3Key.substring(prefix.length);
+        
+        if (relativePath.includes('/')) {
+            // Если в остатке есть слэш — это файл в подпапке. 
+            // Берем только имя первой подпапки.
+            const subFolderName = relativePath.split('/')[0];
+            folders.add(subFolderName);
+        } else {
+            // Если слэшей больше нет — это файл непосредственно в текущей папке
+            files.push(item);
+        }
+    });
+
+    return {
+        currentPath: prefix,
+        subFolders: Array.from(folders),
+        files: files
+    };
+}
+Используйте код с осторожностью.
+3. Почему это лучше, чем запрашивать напрямую у MinIO?
+Скорость: MongoDB вернет результат за миллисекунды (особенно если есть индекс на s3Key). Запрос listObjects в MinIO может быть медленным при большом количестве файлов.
+Доп. данные: Вы сразу получаете originalName, size, createdAt и ваш объект info, чего нет в стандартном ответе MinIO.
+Безопасность: Вы можете легко добавить условие { userId: currentUserId } в запрос find, чтобы пользователь видел только свои файлы.
+4. Рекомендация по индексам
+Чтобы этот поиск работал мгновенно, добавьте индекс в вашу схему ImageRecord.js:
+javascript
+imageRecordSchema.index({ bucket: 1, s3Key: 1 });
+Используйте код с осторожностью.
+Как это вызвать:
+Чтобы получить корень бакета: getFolderContent("my-bucket", "")
+Чтобы получить папку пользователя: getFolderContent("my-bucket", "users/alex123/")
+
+
+
+1. Логика генерации уникального имени
+Алгоритм прост: проверяем наличие имени, и если оно занято, добавляем (1), (2) и так далее, пока не найдем свободное.
+javascript
+import ImageRecord from './model/ImageRecord.js';
+
+async function getUniqueFileName(bucket, folderPath, originalName) {
+    let name = originalName;
+    let extension = "";
+    let baseName = originalName;
+
+    // Разделяем имя и расширение (например, "image" и ".jpg")
+    const lastDotIndex = originalName.lastIndexOf('.');
+    if (lastDotIndex !== -1) {
+        baseName = originalName.substring(0, lastDotIndex);
+        extension = originalName.substring(lastDotIndex);
+    }
+
+    let counter = 1;
+    let isUnique = false;
+
+    while (!isUnique) {
+        // Проверяем, существует ли уже такой s3Key в этом бакете
+        const fullPath = `${folderPath}${name}`;
+        const existing = await ImageRecord.findOne({ bucket, s3Key: fullPath });
+
+        if (!existing) {
+            isUnique = true;
+        } else {
+            // Если занято, создаем новое имя: "file (1).jpg"
+            name = `${baseName} (${counter})${extension}`;
+            counter++;
+        }
+    }
+
+    return name;
+}
+Используйте код с осторожностью.
+2. Применение при загрузке
+В вашем handlers.js вызывайте эту функцию перед тем, как отправлять файл в MinIO и сохранять в базу:
+javascript
+async function handleUpload(userId, bucket, folderPath, fileName) {
+    // 1. Получаем уникальное имя
+    const uniqueName = await getUniqueFileName(bucket, folderPath, fileName);
+    const finalS3Key = `${folderPath}${uniqueName}`;
+
+    // 2. Теперь сохраняем в базу и MinIO с этим уникальным ключом
+    const newImage = new ImageRecord({
+        originalName: fileName, // Оставляем оригинал для красоты
+        name: uniqueName,       // "file (1).jpg"
+        s3Key: finalS3Key,
+        bucket: bucket,
+        userLogin: userId
+    });
+
+    await newImage.save();
+    return uniqueName;
+}
+
+separate folder in separated folder field.
+ put extension to info field
+
+
+ export async function handleListRequest(ws, msg, s3Client, userId) {
+    const { folderName } = msg; 
+    console.log("   folderName", folderName);
+
+    // Строим изолированный базовый путь для конкретного пользователя
+    // Пример: "users/123/"
+    const userBasePath = `${USERS}/${userId}/`;
+
+    // Формируем полный целевой путь внутри папки пользователя.
+    // Если folderName пустая, берем корень пользователя. Если нет — убираем ведущие/ведомые слэши и склеиваем.
+    const targetFolder = folderName === "" 
+        ? userBasePath 
+        : `${userBasePath}${folderName.replace(/^\/+|\/+$/g, '')}/`;
+
+    // 1. Получаем РЕАЛЬНЫЕ ФАЙЛЫ строго из целевой папки пользователя
+    const files = await ImageRecord.find({ 
+        bucket: BUCKET, 
+        folder: targetFolder 
+    }).lean();
+
+    // 2. Поиск ВИРТУАЛЬНЫХ ПОДПАПОК пользователя через агрегацию
+    // Ищем только папки, которые начинаются с targetFolder
+    const folders = await ImageRecord.aggregate([
+        { $match: { bucket: BUCKET, folder: new RegExp(`^${targetFolder}[^/]+`) } },
+        { 
+            $project: { 
+                // Отрезаем targetFolder, чтобы получить только имя подпапки
+                relativeFolder: { $substr: ["$folder", targetFolder.length, -1] } 
+            }
+        },
+        { 
+            $project: {
+                folderNm: { $arrayElemAt: [{ $split: ["$relativeFolder", "/"] }, 0] }
+            }
+        },
+        { $group: { _id: "$folderNm" } } 
+    ]);
+    
+    console.log("Real folders in folder: ", folders);
+    const minioPath = "http://minio:9000/" + BUCKET + "/";
+
+    const filesPayload = await Promise.all(files.map(async (file) => {
+        const command = new GetObjectCommand({
+            Bucket: BUCKET,
+            Key: file.s3Key
+        });
+        const signedUrl = await getSignedUrl(s3Client, command, { 
+            expiresIn: process.env.S3_REF_EXPIRES || 3600 
+        });
+
+        return {
+            fileName: file.originalName,
+            mongoId: file._id.toString(),
+            url: signedUrl,
+            size: file.size || 0
+        };
+    }));
+
+    // 3. Подготовка папок для Protobuf
+    const foldersPayload = Array.from(folders).map(folderNm => ({
+        folderName: folderNm._id,
+        // Ссылка ведет на виртуальный путь относительно корня бакета
+        url: `${minioPath}${targetFolder}${folderNm._id}/`
+    }));
+
+    console.log("Prepared folders payload: ", foldersPayload);
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        listResponse: {
+            files: filesPayload,
+            folders: foldersPayload
+        }
+    };
+    
+    console.log("Final response payload: ", responsePayload);
+    sendEnvelope(ws, responsePayload);
+}
+</file>
+
+<file path="httpAuth.js">
+import express from 'express';
+import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import User from './model/User.js';
+import ImageRecord from './model/ImageRecord.js';
+import { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, ListBucketsCommand, DeleteObjectCommand} from "@aws-sdk/client-s3";
+
+const router = express.Router();
+const USERS = process.env.USERS || 'users';
+const BUCKET = process.env.BUCKET_NAME || 'images';
+const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = process.env;
+
+const s3Client = new S3Client({
+    endpoint: S3_ENDPOINT,
+    region: "us-east-1", // For MinIO any value
+    credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
+    forcePathStyle: true // Required for MinIO
+});
+
+// 2. Маршрут РЕГИСТРАЦИИ
+router.post('/register', async (req, res) => {
+    console.log("Received registration request: ", req.body);
+    try {
+        const { username, password } = req.body;
+        const login = username;
+        // Checking if the name is taken.
+        const existingUser = await User.findOne({ login });
+        if (existingUser) {
+            return res.status(400).json({ error: "Пользователь уже существует" });
+        }
+
+        const exists = await bucketExists(BUCKET);
+        if (!exists) {
+            await createS3Bucket(BUCKET);
+        }
+        // Сreate and save a user
+        const newUser = new User({
+            login,
+            password: password
+        });
+
+        console.log("Before await newUser.save(); ", newUser.login);
+        await newUser.save();
+        const userId = newUser._id.toString();
+
+        // 2. Create a "virtual folder" for the user.
+        // In S3, we simply place an empty .placeholder file in the user's folder.
+        const placeholderPath = `${USERS}/${userId}/.placeholder`;
+        const command = new PutObjectCommand({
+            Bucket: BUCKET,
+            Key: placeholderPath,
+            Body: ""
+        });
+    
+        await s3Client.send(command);
+
+        // 5. Create and save the placeholder record to MongoDB
+        const placeholderRecord = new ImageRecord({
+            name: '.placeholder',
+            originalName: '.placeholder',
+            folder: `${USERS}/${userId}`,
+            s3Key: placeholderPath,
+            bucket: BUCKET,
+            userLogin: login, // Or use userId if preferred
+            size: 0,
+            info: { type: 'initialization_file' }
+        });
+        await placeholderRecord.save();
+        // immediately create a token
+        const token = jwt.sign(
+            { id: newUser._id }, 
+            process.env.JWT_SECRET || 'secret_key', 
+            { expiresIn: process.env.JWT_EXPIRES_IN || '4h' }
+        );
+        res.status(201).json({ 
+            message: "Пользователь создан",
+            token: token 
+        });
+
+    } catch (err) {
+        console.log("Error during registration: ", err);
+        res.status(500).json({ error: "Ошибка сервера при регистрации" });
+    }
+});
+
+// 3. Обновленный маршрут ЛОГИНА (с проверкой хеша)
+router.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const login = username;
+        const user = await User.findOne({ login });
+
+        if (!user) return res.status(401).json({ error: "Неверный логин" });
+        console.log("User found: ", login);
+        // Compare the provided password with the stored hash
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ error: "Неверный пароль" });
+        }
+        console.log("Correct password: ", password);
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret_key', 
+            { expiresIn: process.env.JWT_EXPIRES_IN || '4h' });
+        res.json({ token });
+    } catch (err) {
+        res.status(500).json({ error: "Ошибка входа" });
+    }
+});
+
+export default router; 
+
+async function bucketExists(bucketName) {
+    try {
+      const command = new HeadBucketCommand({ Bucket: bucketName });
+      await s3Client.send(command);
+      return true; // Bucket exists and you have access
+    } catch (error) {
+      if (error.name === "NotFound") {
+        return false; // Bucket does not exist
+      }
+      // Handle other errors (like 403 Forbidden) based on your needs
+      console.error("Error checking bucket:", error.name);
+      return false;
+    }
+}
+
+async function createS3Bucket(bucketName, region = "us-west-2") {
+    const input = {
+      Bucket: bucketName,
+      CreateBucketConfiguration: {
+        LocationConstraint: region,
+      },
+    };
+    console.log(`Attempting to create bucket: ${bucketName} in region: ${region}   input: `, input);
+    try {
+      const command = new CreateBucketCommand(input);
+      const response = await s3Client.send(command);
+      console.log(`Bucket created successfully at: ${response.Location}`);
+      return response;
+    } catch (error) {
+      console.error("Error creating bucket:", error.message);
+      throw error;
+    }
+  }
+</file>
+
+<file path="auxHandler.js">
+import { GetObjectCommand, DeleteObjectCommand, PutObjectCommand, ListBucketsCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { v4 as uuidv4 } from 'uuid';
+import mongoose from 'mongoose';
+import ImageRecord from "./model/ImageRecord.js";
+import User from './model/User.js';
+import protobuf from 'protobufjs';
+import dotenv from 'dotenv';
+import  sanitize from 'sanitize-filename';
+import  path from 'path';
+
+// dotenv.config();
+const root = await protobuf.load('image.proto');
+const ServerEnvelope = root.lookupType('ServerEnvelope');
+//  const ServerType = ServerEnvelope.nested.Type;
+const ServerTypeValues = ServerEnvelope.nested.Type.values;
+const USERS = process.env.USERS || 'users';
+const BUCKET = process.env.BUCKET_NAME || 'images';
+const S3_ENDPOINT = process.S3_ENDPOINT || 'http://minio:9000/'
+//  console.log("process.env.USERS: ", process.env.USERS);
+
+export async function handleGetUserBuckets(ws, msg, s3Client, user){
+    const listBuckets = new ListBucketsCommand({})
+    const response = await s3Client.send(listBuckets);
+    //  console.log(resp14onse.Buckets)
+    const config = await s3Client.config.endpoint();
+
+    const bucketInfo = response.Buckets.map(bucket => {
+        return {bucketName: bucket.Name, 
+            url: `${config.protocol}//${config.hostname}:${config.port}/${bucket.Name}/`};
+    });
+    //  console.log(" bucketInfo: ", bucketInfo)//, names2)
+    //  const bucketUrl = `${s3Client.protocol}//${s3Client.host}:${s3Client.port}/${bucketName}`;
+    console.log("bucketInfo: ", bucketInfo);
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        buckets: { bucketInf: bucketInfo }
+    };
+    sendEnvelope(ws, responsePayload);
+}
+
+export async function handleGetUserBucket(ws, msg, s3Client, user){
+    try {
+        await s3Client.send(new HeadBucketCommand({ Bucket: BUCKET }));
+        const config = await s3Client.config.endpoint();
+        const bucketInfo = [{
+            bucketName: BUCKET, 
+            url: `${config.protocol}//${config.hostname}:${config.port}/${BUCKET}/`
+        }];
+        console.log("bucketInfo: ", BUCKET);
+        const responsePayload = {
+            type: ServerTypeValues.SERVER_MESSAGE,
+            buckets: { bucketInf: bucketInfo}
+        };
+        sendEnvelope(ws, responsePayload);
+    } catch (error) {
+        if (error.name === "NotFound" || error.$metadata?.httpStatusCode === 404) {
+            const responsePayload = {
+                type: ServerTypeValues.SERVER_MESSAGE,
+                serverResp: { 
+                    content: "Bucket 'images' not found",
+                    status: "error"
+                }
+            };
+            console.log("Response for non-existing path: ", responsePayload);
+            sendEnvelope(ws, responsePayload);
+        }
+        const responsePayload = {
+            type: ServerTypeValues.SERVER_MESSAGE,
+            serverResp: { 
+                content: "Access denied or other error: " + error.message,
+                status: "error"
+            }
+        };
+        console.log("Response for non-existing path: ", responsePayload);
+        sendEnvelope(ws, responsePayload); // Other errors (e.g., Access Denied)
+    }
+}
+
+function sendEnvelope(ws, payloadStructure) {
+    if (ws.readyState === ws.OPEN) {
+        console.log("function sendEnvelope      payloadStructure.type: ", payloadStructure.type)
+        // 1. We check the structure for compliance with the .proto schema
+        const errMsg = ServerEnvelope.verify(payloadStructure);
+        if (errMsg) throw Error(errMsg);
+        // 2. Create a message object
+        const message = ServerEnvelope.create(payloadStructure);
+        // 3. Serialize to Uint8Array (Protobuf binary format)
+        const buffer = ServerEnvelope.encode(message).finish();
+        // 4. Sending bytes to a Qt/C++ client
+        ws.send(buffer);
+    }
+}
+
+export async function handleAddFile(ws, msg, s3Client, userId){
+    const fileName = msg.fileName;
+
+    const folderName = msg.folder;
+    const info = msg.info;
+    const img_data = Buffer.from(msg.data);
+
+    console.log("Buffer size:", img_data.length);
+
+    const user = await User.findOne({ _id: userId });
+    const usrLogin = user ? user.login : "Unknown";
+
+    console.log(" fileName= ", fileName, " usrLogin = ", usrLogin,
+        " folder = ", folderName, " info = ", info);
+
+    const userBasePath = `${USERS}/${userId}`;
+
+    const targetFolder = folderName.startsWith(userBasePath) 
+        ? (folderName.endsWith('/') ? folderName : folderName + '/') 
+        : (folderName === '' 
+            ? `${userBasePath}/` 
+            : `${userBasePath}/${sanitizeToPath(folderName)}/`);
+        
+    const {uniqueName, ext} = prepareFilename(fileName);
+    console.log("process.env.USERS: ", process.env.USERS);
+    const s3Key = `${targetFolder}${uniqueName}` 
+    console.log("uniqueName:", uniqueName, " s3Key= ", s3Key, " targetFolder: ", targetFolder, " ext: ", ext);
+
+    const command = new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: s3Key,
+        Body: img_data
+    });
+
+    await s3Client.send(command);
+    console.log(" s3Client.send(command) successful ", s3Key);
+    // Сохранение метаданных в MongoDB
+    const meta = new ImageRecord({
+        name: uniqueName,
+        originalName: fileName,
+        folder: targetFolder,
+        s3Key: s3Key,
+        bucket: BUCKET,
+        userLogin: usrLogin,
+        info: {type : ext},
+        size: img_data.length    
+    });
+    const savedMeta = await meta.save();
+
+    console.log(`Saved image ${uniqueName} for user ${usrLogin} with ID: ${savedMeta._id}`);
+
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        serverResp: {         
+            content: "upload_result",
+            status: "success",
+        }
+    };
+
+    sendEnvelope(ws, responsePayload);
+}
+
+export async function handleListRequest(ws, msg, s3Client, userId){
+    var {folderName} = msg; 
+    console.log("function handleListRequest folderName", folderName); //,  "userLogin", userLogin);
+    if(folderName.endsWith('/')) folderName = folderName.slice(0, -1);
+    const userBasePath = `${USERS}/${userId}`;
+
+    const targetFolder = folderName.startsWith(userBasePath) 
+      ? (folderName.endsWith('/') ? folderName : folderName + '/') 
+      : (folderName === '' 
+          ? `${userBasePath}/` 
+          : `${userBasePath}/${sanitizeToPath(folderName)}/`);
+    
+    console.log("targetFolder: ", targetFolder, "  BUCKET: ", BUCKET);
+    // 1. We get REAL FILES in the user's target folder
+    const files = await ImageRecord.find({ 
+        bucket: BUCKET, 
+        folder: targetFolder 
+    }).lean();
+    console.log("Real files in folder: ", files, " targetFolder: ", targetFolder);
+    // 2. Finding VIRTUAL user's SUB-FOLDERS through aggregation
+    const folders = await ImageRecord.aggregate([
+        { $match: { bucket: BUCKET, folder: new RegExp(`^${targetFolder}[^/]+`) } },
+        { $project: { 
+            // Cut off the current prefix and take only the next path segment
+            relativeFolder: { $substr: ["$folder", targetFolder.length, -1] } 
+        }},
+        { $project: {
+            folderNm: { $arrayElemAt: [{ $split: ["$relativeFolder", "/"] }, 0] }
+        }},
+        { $group: { _id: "$folderNm" } } // Group to get unique names
+    ]);
+    //console.log("targetFolder: ", targetFolder);
+    console.log("Real folders in folder: ", folders);
+    //  const foldersval = folders.map(({ _id }) => _id);
+    const minioPath = "http://minio:9000/" + BUCKET + "/";
+    const filesPayload = await Promise.all(files.map(async (file) => {
+        // Generate a temporary link directly to Minio
+        const command = new GetObjectCommand({
+            Bucket: BUCKET,
+            Key: file.s3Key
+        });
+        // The link will be valid for, for example, 1 hour (3600 seconds)
+        const signedUrl = await getSignedUrl(s3Client, command, { 
+            expiresIn: process.env.S3_REF_EXPIRES || 3600 });
+
+        return {
+            fileName: file.originalName,
+            mongoId: file._id.toString(),
+            url: signedUrl,
+            size: file.size || 0
+        };
+    }));
+    // 3. Preparing an array of folders for Protobuf
+    
+    const foldersPayload = Array.from(folders).map(folderNm => ({
+        folderName: folderNm._id,
+        url: folderName===""? `${minioPath}${folderNm._id}/`:`${minioPath}${folderName}/${folderNm._id}/`
+    }));
+    console.log("Prepared folders payload: ", foldersPayload);
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        listResponse: {
+            files: filesPayload,
+            folders: foldersPayload
+        }
+    };
+    console.log("Final response payload: ", responsePayload);
+    sendEnvelope(ws, responsePayload);
+}
+
+export async function  handleDeleteFile(ws, msg, s3Client, userId){
+    const fname = msg.fileName
+
+    //  const usrLogin = msg.userLogin
+    const mongoId = msg.mongoId
+    console.log("deleteFile:  fname = ", fname, 
+       /* "usrLogin = ", usrLogin, */ "mongoId = ", mongoId)
+
+    const record = await ImageRecord.findById(mongoId);
+    
+    if (!record) {
+        console.log("Запись не найдена в базе данных");
+        throw new Error("Запись не найдена в базе данных");
+    }
+
+    const dltFile = new DeleteObjectCommand({
+        Bucket: BUCKET,
+        Key: record.s3Key
+    });
+    await s3Client.send(dltFile);
+    console.log(`Файл ${record.s3Key} удален из MinIO`);
+
+    // Removing metadata from MongoDB
+    await ImageRecord.findByIdAndDelete(mongoId);
+    console.log(`Запись ${mongoId} удалена из MongoDB`);
+    
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        serverResp: {         
+            content: "delete_file_result",
+            status: "success",
+        }
+    };
+    sendEnvelope(ws, responsePayload);
+    console.log("Delete document off ", fname, " from ", BUCKET);  
+}
+
+export async function handlefilesIdsRequest(ws, msg, s3Client, userId){
+    const ids = msg.mongoIds; // Array of MongoDB IDs
+    const filesPayload = await Promise.all(ids.map(async (id) => {
+        console.log("Processing ID: ", id);
+        const record = await ImageRecord.findById(id);
+        if (record) {
+            const command = new GetObjectCommand({
+                Bucket: BUCKET,
+                Key: record.s3Key
+            });
+            const signedUrl = await getSignedUrl(s3Client, command, { 
+                expiresIn: process.env.S3_REF_EXPIRES || 360 
+            });
+            return {
+                    fileName: record.originalName,
+                    mongoId: record._id.toString(),
+                    url: signedUrl,
+                    size: record.size || 0
+                }
+        }   else {              
+            console.log(`Record with ID ${id} not found in MongoDB`);   
+                return{
+                    fileName: "",
+                    mongoId: id.toString(),
+                    url: "",
+                    size: 0
+                }          
+        } 
+    }));
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        filesIdsResponse: {
+            files: filesPayload // This will be filled with file info objects
+        }
+    };
+    sendEnvelope(ws, responsePayload);      
+}
+
+export async function handlePathInfRequest(ws, msg, s3Client, userId){
+    console.log("handlePathInfRequest  msg.netPath: ", msg.netPath, " userId: ", userId);
+    const prefix = `${USERS}/${userId}`;
+    const inputPath = msg.netPath;
+
+    // 1. Ensure the path starts with the required prefix
+    let formattedPath = msg.netPath;
+    if (!formattedPath.startsWith(prefix)) {
+        if (formattedPath.startsWith(USERS)) { 
+            formattedPath = prefix + formattedPath.substring(USERS.length); 
+        }
+        else formattedPath = prefix +'/'+ formattedPath;
+    }
+
+    console.log("Formatted path after prefix check: ", formattedPath);
+    const isExplicitFolder = formattedPath.endsWith('/');
+    const escapeRegex = (str) => str.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    // Если путь заканчивается на '/', это может быть ТОЛЬКО папка
+    if (isExplicitFolder) {
+//        const query = { folder: { $regex: `^${escapeRegex(formattedPath)}` } };
+        const query = { folder: { $regex: `^${sanitizeToPath(formattedPath)}` } };
+        const doc = await ImageRecord.findOne(query, { projection: { _id: 1 } });
+        if(doc) {
+//            console.log("formattedPath: ", formattedPath, " sanitizeToPath(formattedPath): ", sanitizeToPath(formattedPath))
+            await handleListRequest(ws, {folderName: inputPath}/*inputPath formattedPathor msg*/, s3Client, userId)
+            const responsePayload = {
+                type: ServerTypeValues.SERVER_MESSAGE,
+                pathInfResponse: {         
+//                    netPath: escapeRegex(formattedPath),
+//                    netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+                    netPath: `${S3_ENDPOINT}${BUCKET}/${inputPath}`,
+                    netStorePath: "",
+                    result: "folder"
+                }
+            };
+            console.log("Response for folder path 1: ", responsePayload);
+            sendEnvelope(ws, responsePayload);
+            return
+        } else {
+            const responsePayload = {
+                type: ServerTypeValues.SERVER_MESSAGE,
+                pathInfResponse: {         
+//                    netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+                    netPath: `${S3_ENDPOINT}${BUCKET}/${inputPath}/`,
+                    netStorePath: "",
+                    result: "not exist"
+                }
+            };
+            console.log("Response for non-existing path: ", responsePayload);
+            sendEnvelope(ws, responsePayload);
+        }
+        return;
+    }
+    const folderWithSlash = `${formattedPath}/`;
+//    const folderQuery = { folder: { $regex: `^${escapeRegex(folderWithSlash)}` } };
+    const folderQuery = { folder: { $regex: `^${sanitizeToPath(folderWithSlash)}` } };
+    const folderDoc = await ImageRecord.findOne(folderQuery, { projection: { _id: 1 } });
+
+    if (folderDoc){
+        await handleListRequest(ws, {folderName: inputPath}/*inputPath or msg*/, s3Client, userId)
+        const responsePayload = {
+            type: ServerTypeValues.SERVER_MESSAGE,
+            pathInfResponse: {         
+//                netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+                netPath: `${S3_ENDPOINT}${BUCKET}/${inputPath}/`,
+                netStorePath: "",
+                result: "folder"
+            }
+        };
+        console.log("Response for folder path 2: ", responsePayload);
+        sendEnvelope(ws, responsePayload);
+        return
+    }
+
+    const fileQuery = {
+        $or: [
+            { s3Key: formattedPath },
+            {
+                $expr: {
+                    $eq: [
+                        { $concat: ["$folder", "$originalName"] },
+                        formattedPath
+                    ]
+                }
+            }
+        ]
+    };
+    const fileDoc = await ImageRecord.findOne(fileQuery, { projection: { _id: 1 } });
+    
+    if (fileDoc) {
+        const command = new GetObjectCommand({
+            Bucket: BUCKET,
+            Key: record.s3Key
+        });
+        const signedUrl = await getSignedUrl(s3Client, command, { 
+            expiresIn: process.env.S3_REF_EXPIRES || 360 
+        });
+        const responsePayload = {
+            type: ServerTypeValues.SERVER_MESSAGE,
+            filesIdsResponse: {
+                files: {
+                    fileName: fileDoc.originalName,
+                    mongoId: fileDoc._id.toString(),
+                    url: signedUrl,
+                    size: fileDoc.size || 0     
+                } // This will be filled with file info objects
+            }
+        };
+        sendEnvelope(ws, responsePayload);
+        return;
+    }
+
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        pathInfResponse: {         
+//            netPath: `${S3_ENDPOINT}${BUCKET}/${sanitizeToPath(formattedPath.replace(`${userId}/`, ""))}/`,
+            netPath: `${S3_ENDPOINT}${BUCKET}/${inputPath}/`,
+            netStorePath: "",
+            result: "not exist"
+        }
+    };
+    console.log("Response for non-existing path: ", responsePayload);
+    sendEnvelope(ws, responsePayload);
+    return;
+}
+
+function prepareFilename(originalName) {
+    const ext = path.extname(originalName);
+    const nameOnly = path.basename(originalName, ext);
+    console.log("ext: ", ext, "  nameOnly: ", nameOnly);
+    // Clear the name and add the UUID
+    const safeName = sanitize(nameOnly).replace(/\s+/g, '-').toLowerCase();
+    const uniqueName = `${uuidv4()}-${safeName}${ext}`;
+    console.log("finalFilename: ", uniqueName, "  ext: ", ext);
+    return {uniqueName, ext};
+}
+
+function sanitizeToPath(input) {
+    // 1. Replace backslashes with forward slashes
+    let path = input.replace(/\\/g, '/');
+    
+    // 2. Collapse multiple slashes into a single slash
+    path = path.replace(/\/+/g, '/');
+    
+    // 3. Trim leading and trailing slashes
+    path = path.replace(/^\/+|\/+$/g, '');
+    
+    // 4. Sanitize each individual segment to protect the filesystem
+    return path
+      .split('/')
+      .map(segment => sanitize(segment))
+      .filter(segment => segment.length > 0) // Remove any empty segments created by sanitization
+      .join('/');
+}
+</file>
+
+<file path="image.proto">
+syntax = "proto3";
+
+
+message Picture {
+  string fileName = 1;    // Имя файла в Minio
+  string folderId = 2;     // ID документа в MongoDB
+//  string userLogin = 3;      // ID пользователя для проверки прав
+//  string bucketName = 4;  // Имя корзины (bucket)
+  string contentType = 3;
+  bytes data = 4;
+  int64 timestamp = 5;
+}
+
+message AddFileRequest{
+  string fileName = 1;    // Имя файла в Minio
+//  string userLogin = 2;      // ID пользователя для проверки прав
+//  string bucketName = 3;  // Имя корзины (bucket)
+  string folder = 2;
+  string info = 3;
+  bytes data = 4;
+}
+
+message AddFolderRequest{
+  string folderName = 1;    // Имя папки в Minio
+//  string userLogin = 2;      // ID пользователя для проверки прав
+//  string bucketName = 3;  // Имя корзины (bucket)
+  string folder = 2;
+  string info = 3;
+}
+
+message ServerResponse{ // to AddFileFolderRequest
+  string content = 1;
+  string status = 2; 
+}
+
+message FilesIds{
+    repeated string mongoIds = 1;
+}
+
+message FilesFoldersListRequest {
+//  string bucketName = 1;
+  string folderName = 1;
+//  string userLogin = 3;
+}
+
+message FilesOnlyListRequest {
+//  string bucketName = 1;
+  string folderName = 1;
+//  string userLogin = 3;
+}
+
+message FileInfo {
+  string fileName = 1;
+  string mongoId = 2;
+  string url = 3;
+  int64 size = 4;
+}
+
+message PathInfoRequest {
+    string netPath = 1;
+}
+
+message PathInfoResponse {
+    string netPath = 1;
+    string netStorePath = 2;
+    string result = 3;
+}
+
+message FolderInfo {
+  string folderName = 1;
+  string url = 2;
+}
+
+message FilesFoldersListResponse {
+  repeated FileInfo files = 1;
+  repeated FolderInfo folders = 2;
+}
+
+message FilesOnlyListResponse {
+  repeated FileInfo files = 1;
+}
+
+message BucketsRequest {
+  string userLogin = 1; // Запрашиваем бакеты конкретного пользователя
+}
+
+message BucketInfo {
+  string bucketName = 1;
+  string url = 2;
+}
+
+message BucketsList {                 // respond to BucketsRequest
+  repeated BucketInfo bucketInf = 1;
+}
+
+message DeleteFileRequest {
+    string fileName = 1;    // Имя файла в Minio
+    string mongoId = 2;     // ID документа в MongoDB
+//    string userLogin = 3;      // ID пользователя для проверки прав
+//    string bucketName = 4;  // Имя корзины (bucket)
+}
+
+message DeleteFolderRequest {
+    string folderName = 1;    // Имя файла в Minio
+    string fileId = 2;     // ID документа в MongoDB
+//    string userLogin = 3;      // ID пользователя для проверки прав
+//    string bucketName = 4;  // Имя корзины (bucket)
+}
+
+message DeleteBucketRequest {
+    string bucketName = 1;
+}
+
+message RegisterRequest {
+  string userLogin = 1;
+  string password = 2;
+  string full_name = 3; // Доп. поле только для регистрации
+}
+
+message AuthRequest {
+  string userLogin = 1;
+  string password = 2;
+}
+
+message AuthResponse {
+  string token = 1;
+  string error = 2;
+}
+
+message BaseMessage {
+  oneof content {
+    Picture empty = 1;
+    AddFileRequest addFile = 2;
+    AddFolderRequest addFolder = 3;
+    ServerResponse serverResp = 4;
+    FilesFoldersListRequest listRequest = 5;
+    FilesOnlyListRequest filesListRequest = 6;
+    FileInfo fileInfo = 7;
+    FolderInfo folderInfo = 8;
+    FilesFoldersListResponse listResponse = 9;
+    FilesOnlyListResponse filesListResponse = 10;
+    BucketsRequest reqUserBuckets = 11;
+    BucketInfo bucketInfo = 12;
+    BucketsList buckets = 13;
+    DeleteFileRequest deleteFile = 14;
+    DeleteFolderRequest deleteFolder = 15;
+    DeleteBucketRequest deleteBucket = 16;
+    RegisterRequest regRequest = 17;
+    AuthRequest authRequest = 18;
+    AuthResponse authResponse = 19;
+  }
+}
+
+// For messages traveling: Client -> Server
+message ClientEnvelope {
+  enum Type {
+    UNKNOWN = 0;
+    AUTH_REQUEST = 1;
+    CLIENT_MESSAGE = 2;
+  }
+  Type type = 1;
+  string token = 14;
+  oneof content {
+    AddFileRequest addFile = 2;
+    AddFolderRequest addFolder = 3;
+    FilesFoldersListRequest listRequest = 4;
+    FilesOnlyListRequest filesListRequest = 5;
+    FilesIds filesIdsRequest = 6;
+    PathInfoRequest pathInfRequest = 7;
+    BucketsRequest reqUserBuckets = 8;
+    DeleteFileRequest deleteFile = 9;
+    DeleteFolderRequest deleteFolder = 10;
+    DeleteBucketRequest deleteBucket = 11;
+    RegisterRequest regRequest = 12;
+    AuthRequest authRequest = 13;
+  }
+}
+
+// For messages traveling: Server -> Client
+message ServerEnvelope {
+  enum Type {
+    UNKNOWN = 0;
+    AUTH_RESPONSE = 1;
+    SERVER_MESSAGE = 2;
+  }
+  Type type = 1;
+  oneof content {
+    ServerResponse serverResp = 2;
+    FileInfo fileInfo = 3;
+    FolderInfo folderInfo = 4;
+    FilesFoldersListResponse listResponse = 5;
+    FilesOnlyListResponse filesListResponse = 6;
+    BucketInfo bucketInfo = 7;
+    BucketsList buckets = 8;
+    AuthResponse authResponse = 9;
+    FilesOnlyListResponse filesIdsResponse = 10;
+    PathInfoResponse pathInfResponse = 11;
+  }
+}
+</file>
+
+<file path="server.js">
+//  import { handleViewFolder, handleGetFolderContent, handleGetFolderOnlyFilesContent} from './handlers.js';
+//  import { handleRegister, handleLogin, verifyToken} from './authHandlers.js';
+import https from 'https';
+import fs from 'fs';
+import { WebSocketServer } from 'ws';
+import mongoose from 'mongoose';
+import ImageRecord from './model/ImageRecord.js';
+import protobuf from 'protobufjs';
+import { S3Client, CreateBucketCommand, HeadBucketCommand, PutObjectCommand, ListBucketsCommand, DeleteObjectCommand} from "@aws-sdk/client-s3";
+
+import { ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import express from 'express';
+import jwt from 'jsonwebtoken';
+
+import router from './httpAuth.js';
+import User from './model/User.js';
+import { handleGetUserBuckets, handleGetUserBucket, handleAddFile, handleListRequest, handleDeleteFile, handlefilesIdsRequest, handlePathInfRequest } from './auxHandler.js';
+
+import 'dotenv/config';
+
+const USERS = process.env.USERS || 'users';
+const BUCKET = process.env.BUCKET_NAME || 'images';
+//  console.log("Config variable process.env.USERS: ", process.env.USERS);
+const app = express();
+app.use(express.json());
+app.use('/auth', router);
+
+app.listen(8081, () => console.log('Auth server running on port 8081'));
+
+// Настройки из окружения
+const { S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, MONGO_URL } = process.env;
+
+//  console.log("S3_ENDPOINT: ", S3_ENDPOINT, " S3_ACCESS_KEY: ", S3_ACCESS_KEY, " S3_SECRET_KEY: ", S3_SECRET_KEY, " S3_BUCKET: ", S3_BUCKET, " MONGO_URL: ", MONGO_URL);  
+
+const serverConfig = {
+    key: fs.readFileSync('key.pem'),
+    cert: fs.readFileSync('cert.pem')
+};
+
+// 1. Connecting to MongoDB
+mongoose.connect(MONGO_URL);
+
+// 2. Setting of S3 (MinIO) client
+const s3Client = new S3Client({
+  endpoint: S3_ENDPOINT,
+  region: "us-east-1", // for MinIO any value 
+  credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
+  forcePathStyle: true // Required for MinIO
+});
+
+async function getDownloadUrl(bucketName, fileName) {
+    try {
+        // Генерируем ссылку, которая будет жить, например, 1 час (3600 сек)
+        const url = await s3Clientexternal.presignedGetObject(bucketName, fileName, 3600);
+        
+        console.log("Эта ссылка будет работать в браузере:", url);
+        return url;
+    } catch (err) {
+        console.error("Ошибка генерации ссылки:", err);
+    }
+}
+
+// const createCommand = new CreateBucketCommand({ 
+//     Bucket: BUCKET 
+// });
+// async function bootstrap() {
+//     try {
+//         //  console.log("An attempt to create backet:", createCommand.input.Bucket);
+//         await s3Client.send(createCommand);
+//         //  console.log("Bucket ", reateCommand.input.Bucket, " created successfully.");
+//     } catch (err) {
+//         if (err.Code === 'BucketAlreadyOwnedByYou' || err.Code === 'BucketAlreadyExists') {
+//             //  console.log("Bucket ", reateCommand.input.Bucket, " exists already, proceeding...");
+//         } else {
+//             // console.error("Ошибка инициализации хранилища:", err);
+//         }
+//     }
+// }
+
+//  bootstrap(); // performed once
+protobuf.load("image.proto", (err, root) => {
+    if (err) throw err;
+    // Create HTTPS server
+    const httpsServer = https.createServer({
+        key: fs.readFileSync('./key.pem'),
+        cert: fs.readFileSync('./cert.pem'),
+        minVersion: 'TLSv1.2'// Allow TLS 1.2
+    });
+
+    const wss = new WebSocketServer({ noServer: true});
+    httpsServer.on('upgrade', (request, socket, head) => {
+        // 3. Извлекаем заголовок авторизации
+        console.log("Upgrade request received with headers:", request.headers);
+        const authHeader = request.headers['authorization'];
+    
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            console.log("Unauthorized upgrade attempt");
+            // 4. Отклоняем на уровне HTTP, не переходя в WebSocket
+            socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+            socket.destroy();
+            return;
+        }
+        const token = authHeader.split(' ')[1];
+
+        try {
+            //  console.log("process.env.JWT_SECRET: ", process.env.JWT_SECRET);
+            // 2. Верифицируем токен (проверит и подпись, и expiration time)
+            const secret = process.env.JWT_SECRET || 'secret_key';
+            const decoded = jwt.verify(token, secret);
+    
+            // 3. Сохраняем данные пользователя прямо в запрос, чтобы достать их позже
+            request.user = decoded; 
+    
+            // 4. Завершаем апгрейд
+            wss.handleUpgrade(request, socket, head, (ws) => {
+                wss.emit('connection', ws, request);
+            });
+        } catch (err) {
+            console.error("JWT Error:", err.message);
+            socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+            socket.destroy();
+        }
+    });
+    wss.on('connection', (ws, req) => {
+        //  console.log('Secure Qt Client connected via WSS: ', req.user);
+
+        ws.on('message', async (message) => {
+            try {
+                // Декодируем входящий ClientEnvelope из сырых байт
+                const ClientEnvelope = root.lookupType('ClientEnvelope');
+                const envelope = ClientEnvelope.decode(message);
+                
+                const ClientTypeValues = ClientEnvelope.nested.Type.values;
+//                console.log("ClientTypeValues: ", ClientTypeValues);
+                // Определяем тип запроса на основе поля 'type'
+//                console.log("ClientTypeValues.AUTH_REQUEST: ", ClientTypeValues.AUTH_REQUEST, "   envelope.type: ", envelope.type)
+//                    , "ClientTypeValues.AUTH_REQUEST: ", ClientTypeValues.AUTH_REQUEST)
+                const user = await User.findOne({ _id: req.user.id });
+                const emaillogin = user ? user.login : "Unknown";
+//                console.log("Decoded Protobuf message content: ", envelope.type, " from user: ", emaillogin); 
+
+                switch (envelope.type) {
+                    // case ClientTypeValues.AUTH_REQUEST:
+                    //     console.log("case ClientTypeValues.AUTH_REQUEST")
+                    //     if (envelope.authRequest) {
+                    //         console.log("envelope.authRequest")
+                    //         await handleLogin(ws, envelope.authRequest);
+                    //     } else if (envelope.regRequest) {
+                    //         console.log("envelope.regRequest")
+                    //         await handleRegister(ws, envelope.regRequest);
+                    //     } else {
+                    //         console.log('Other AUTH_REQUEST content received:', envelope.content);
+                    //     }
+                    //     break;
+                    case ClientTypeValues.CLIENT_MESSAGE:
+                        if(envelope.reqUserBuckets){
+                            // console.log("Received bucket list request from user: ", req.user ? req.user.id : "Unknown");
+                            await handleGetUserBucket(ws, envelope.reqUserBuckets, s3Client, req.user ? req.user.id : "Unknown");
+                        }                   //      envelope.content
+                        if(envelope.addFile){
+                            // async function handleAddFile(msg, root, s3Client, BaseMessage, ws)
+                            await handleAddFile(ws, envelope.addFile, s3Client, req.user.id);
+                        }
+                        if(envelope.listRequest){
+                            // async function handleAddFile(msg, root, s3Client, BaseMessage, ws)
+                            await handleListRequest(ws, envelope.listRequest, s3Client, req.user.id);
+                        }
+                        if(envelope.deleteFile){
+                            await handleDeleteFile(ws, envelope.deleteFile, s3Client, req.user.id);
+                        }
+                        if(envelope.filesIdsRequest){
+                            // console.log("Received filesIdsRequest from user: ", req.user ? req.user.id : "Unknown");
+                            await handlefilesIdsRequest(ws, envelope.filesIdsRequest, s3Client, req.user.id);
+                        }
+                        if(envelope.pathInfRequest){
+                            // console.log("Received infoByNetPathRequest from user: ", req.user ? req.user.id : "Unknown");
+                            await handlePathInfRequest(ws, envelope.pathInfRequest, s3Client, req.user.id);
+                        }
+//                        console.log(`User ${user.login} is authorized to see files`);
+                        // Проверяем, пришел ли запрос на регистрацию
+                        console.log('Other CLIENT_MESSAGE content received:', envelope.content);
+                        break;
+
+                    default:
+                        console.log('Received unknown or unhandled envelope type:', envelope.type);
+                        break;
+                }
+            } catch (error) {
+                console.error('Failed to process incoming message:', error);
+                sendError(ws, 'Internal server error processing payload.'); //TODO
+            }
+        });
+    });
+
+    // Слушаем порт 8080 (или 443 для стандартного HTTPS)
+    httpsServer.listen(8080, '0.0.0.0', () => {
+        console.log('Secure WSS Server running on port 8080');
+    });
+
+});
+
+function sendError(ws, errorMessage) {
+    const responsePayload = {
+        type: ServerTypeValues.SERVER_MESSAGE,
+        serverResp: {         
+            content: errorMessage,
+            status: "error",
+        }
+    };
+    sendEnvelope(ws, responsePayload);
+}
+</file>
+
+</files>

@@ -319,10 +319,11 @@ export async function handlePathInfRequest(ws, msg, s3Client, userId){
     // Если путь заканчивается на '/', это может быть ТОЛЬКО папка
     if (isExplicitFolder) {
 //        const query = { folder: { $regex: `^${escapeRegex(formattedPath)}` } };
+        console.log("sanitizeToPath(formattedPath): ", sanitizeToPath(formattedPath));
         const query = { folder: { $regex: `^${sanitizeToPath(formattedPath)}` } };
         const doc = await ImageRecord.findOne(query, { projection: { _id: 1 } });
         if(doc) {
-//            console.log("formattedPath: ", formattedPath, " sanitizeToPath(formattedPath): ", sanitizeToPath(formattedPath))
+            console.log("handlePathInfRequest inputPath: ", inputPath);
             await handleListRequest(ws, {folderName: inputPath}/*inputPath formattedPathor msg*/, s3Client, userId)
             const responsePayload = {
                 type: ServerTypeValues.SERVER_MESSAGE,
