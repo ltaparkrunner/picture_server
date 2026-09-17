@@ -22,6 +22,7 @@ const s3Client = new S3Client({
 router.post('/register', async (req, res) => {
     console.log("Received registration request: ", req.body);
     try {
+        console.log("router.post('/register', async (req, res) =>")
         const { username, password } = req.body;
         const login = username;
 
@@ -39,12 +40,12 @@ router.post('/register', async (req, res) => {
 
         // ХЭШИРУЕМ ПАРОЛЬ перед сохранением (ИСПРАВЛЕНИЕ БАГА)
         const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        // const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         // Создаем и сохраняем пользователя с хэшированным паролем
         const newUser = new User({
             login,
-            password: hashedPassword
+            password: password //hashedPassword
         });
 
         console.log("Saving new user: ", newUser.login);
@@ -93,6 +94,7 @@ router.post('/register', async (req, res) => {
 
 // 2. Маршрут ЛОГИНА
 router.post('/login', async (req, res) => {
+    console.log("router.post('/login', async (req, res) =>")
     try {
         const { username, password } = req.body;
         const login = username;
@@ -102,7 +104,10 @@ router.post('/login', async (req, res) => {
         console.log("User found: ", login);
 
         // Сравнение переданного пароля с хэшем в БД
-        const isMatch = await bcrypt.compare(password, user.password);
+        console.log("user.password = ", user.password)
+        console.log("password = ", password)
+        // const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await user.comparePassword(password);
         if (!isMatch) {
             return res.status(401).json({ error: "Неверный пароль" });
         }
