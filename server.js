@@ -156,10 +156,13 @@ https.createServer(sslOptions, app).listen(8080, '0.0.0.0', () => {
 });
 
 // Эндпоинт авторизационной проверки
-app.get('/api/auth/me', authenticateToken, (req, res) => {
-    // Токен верный! Возвращаем только имя пользователя, привязанное к этому токену
-    console.log("app.get('/api/auth/me', authenticateToken, (req, res) => {")
-    res.status(200).json({ 
-        username: req.user.username 
-    });
+app.get('/api/auth/me', authenticateToken, async(req, res) => {
+    try {
+        // Ищем в MongoDB по ID из токена, запрашивая ТОЛЬКО поле username для скорости
+        const user = await User.findById(req.user.id).select('login');
+        if (!user) return res.sendStatus(404);
+        res.status(200).json({ username: user.login });
+    } catch (err) {
+        res.sendStatus(500);
+    }
 });
