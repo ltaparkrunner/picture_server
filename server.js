@@ -131,6 +131,18 @@ app.post('/api/files/path-info', authenticateToken, async (req, res) => {
     }
 });
 
+// 1. Обработка HEAD запроса (именно его посылает QNetworkAccessManager::head)
+app.head('/ping', (req, res) => {
+    // Возвращаем статус 200 OK без тела ответа (экономит трафик)
+    console.log("got ping request 1");
+    res.status(200).end();
+});
+
+// 2. Дополнительно обрабатываем GET запрос (чтобы можно было проверить сервер через браузер)
+app.get('/ping', (req, res) => {
+    console.log("got ping request 2");
+    res.status(200).json({ status: "OK", message: "Server is alive" });
+});
 
 // 4. Запуск единого HTTPS сервера для Express на порту 8080
 const sslOptions = {
@@ -141,4 +153,13 @@ const sslOptions = {
 
 https.createServer(sslOptions, app).listen(8080, '0.0.0.0', () => {
     console.log('Secure HTTPS REST API Server running on port 8080');
+});
+
+// Эндпоинт авторизационной проверки
+app.get('/api/auth/me', authenticateToken, (req, res) => {
+    // Токен верный! Возвращаем только имя пользователя, привязанное к этому токену
+    console.log("app.get('/api/auth/me', authenticateToken, (req, res) => {")
+    res.status(200).json({ 
+        username: req.user.username 
+    });
 });

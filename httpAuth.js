@@ -118,7 +118,7 @@ router.post('/login', async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRES_IN || '4h' }
         );
         
-        return res.json({ token });
+        return res.json({ token, username: username });
     } catch (err) {
         console.error("Error during login:", err);
         return res.status(500).json({ error: "Ошибка входа" });
